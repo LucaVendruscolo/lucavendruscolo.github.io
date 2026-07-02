@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luca Vendruscolo</title>
+  <meta name="description" content="Luca Vendruscolo — robotics and machine learning. MPhil in Advanced Computer Science, University of Cambridge. Physical projects: a downwash test rig, a reinforcement-learning marble labyrinth, and a robotic arm.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FAF6EE'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='15' font-weight='600' fill='%23211E19' text-anchor='middle'%3ELV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-row">
+      <span class="wordmark">Luca Vendruscolo</span>
+      <nav aria-label="Sections">
+        <a href="#projects">Projects</a>
+        <a href="#research">Research</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- Intro -->
+    <section class="hero" aria-label="Introduction">
+      <div class="wrap hero-grid">
+        <div class="hero-text">
+          <h1>Luca Vendruscolo</h1>
+          <p class="meta-line">MPhil Advanced Computer Science &mdash; University of Cambridge</p>
+          <p>I like building physical systems that learn: test rigs, robots, and the
+             control and machine-learning software behind them. I recently finished an
+             MPhil in Advanced Computer Science at the University of Cambridge, where my
+             research looked at how memory helps robots predict fluid wake effects.</p>
+          <p>Below are some of the things I have built, with video of each running.</p>
+          <p class="link-row">
+            <a href="https://github.com/LucaVendruscolo">GitHub</a> &middot;
+            <a href="https://www.linkedin.com/in/luca-vendruscolo-2707b2217/">LinkedIn</a> &middot;
+            <a href="https://arxiv.org/abs/2603.22472">arXiv<span class="ext" aria-hidden="true">&#8599;</span></a> &middot;
+            <a href="https://tutoring-luca.vercel.app/">Tutoring<span class="ext" aria-hidden="true">&#8599;</span></a> &middot;
+            <a href="mailto:lucavendruscolo3@gmail.com">Email</a>
+          </p>
+        </div>
+        <div class="hero-photo">
+          <img src="assets/img/headshot.webp" alt="Portrait of Luca Vendruscolo" width="640" height="960" fetchpriority="high">
+          <p class="photo-caption">Cambridge, 2026</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 01 — Projects -->
+    <section id="projects" class="section accent-sage">
+      <div class="wrap">
+        <h2><span class="sec-num">01</span> &mdash; Projects</h2>
+
+        <article class="project">
+          <div class="project-media">
+            <div class="carousel" data-carousel tabindex="0" role="region" aria-roledescription="carousel" aria-label="Downwash gantry media">
+              <ul class="carousel-track" role="presentation">
+                <li class="carousel-slide" role="group" aria-roledescription="slide" aria-label="1 of 3">
+                  <span class="video-tag">Video</span>
+                  <video controls preload="none" playsinline aria-label="The downwash gantry rig running" poster="assets/img/gantry-poster.jpg" width="1080" height="986">
+                    <source src="assets/video/gantry-rig.mp4" type="video/mp4">
+                  </video>
+                </li>
+                <li class="carousel-slide" role="group" aria-roledescription="slide" aria-label="2 of 3">
+                  <img src="assets/img/gantry-labeled.webp" alt="Labelled diagram of the downwash gantry: upstream propeller, linear rails, and the tethered monocopter" width="1056" height="1049" loading="lazy" decoding="async">
+                </li>
+                <li class="carousel-slide" role="group" aria-roledescription="slide" aria-label="3 of 3">
+                  <img src="assets/img/gantry-episode.webp" alt="Plot of a gantry episode: measured altitude disturbance of the monocopter over time" width="1400" height="1200" loading="lazy" decoding="async">
+                </li>
+              </ul>
+              <div class="carousel-bar">
+                <button class="carousel-btn" data-prev hidden aria-label="Previous slide">&larr;</button>
+                <button class="carousel-btn" data-next hidden aria-label="Next slide">&rarr;</button>
+                <span class="carousel-counter" hidden aria-hidden="true">1&#8202;/&#8202;3</span>
+                <div class="carousel-captions" aria-live="polite">
+                  <p><span class="fig">Fig. 1</span> &mdash; The rig in motion: propeller wake disturbing the tethered monocopter.</p>
+                  <p hidden><span class="fig">Fig. 2</span> &mdash; Labelled overview of the gantry hardware.</p>
+                  <p hidden><span class="fig">Fig. 3</span> &mdash; Altitude disturbance measured over one episode.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-text">
+            <h3>Tethered-Monocopter Downwash Gantry</h3>
+            <p class="meta-line">Raspberry Pi &middot; Arduino &middot; LQR @ 50 Hz &middot; Time-of-flight sensing</p>
+            <p>A two-dimensional test rig for studying downwash. An upstream propeller
+               generates a time-varying wake, and a tethered monocopter riding on linear
+               rails downstream measures the altitude disturbance it causes. A 50&nbsp;Hz
+               LQR loop keeps the monocopter vertically stabilised while data is collected.</p>
+            <p>Raspberry Pi/Python control, Arduino serial I/O, ESC PWM, stepper actuation
+               and time-of-flight sensing run in a single real-time stack. The rig produced
+               the hardware dataset behind the paper below on memory-based wake prediction.</p>
+            <p><a href="https://arxiv.org/abs/2603.22472">Paper<span class="ext" aria-hidden="true">&#8599;</span></a></p>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project-media">
+            <div class="carousel" data-carousel tabindex="0" role="region" aria-roledescription="carousel" aria-label="Marble labyrinth media">
+              <ul class="carousel-track" role="presentation">
+                <li class="carousel-slide" role="group" aria-roledescription="slide" aria-label="1 of 2">
+                  <span class="video-tag">Video</span>
+                  <video controls preload="none" playsinline aria-label="The reinforcement-learning agent playing the marble labyrinth" poster="assets/img/maze-poster.jpg" width="960" height="544">
+                    <source src="assets/video/marble-maze.mp4" type="video/mp4">
+                  </video>
+                </li>
+                <li class="carousel-slide" role="group" aria-roledescription="slide" aria-label="2 of 2">
+                  <img src="assets/img/marble-maze.webp" alt="The wooden marble labyrinth with stepper motors mounted on its two control knobs" width="1200" height="900" loading="lazy" decoding="async">
+                </li>
+              </ul>
+              <div class="carousel-bar">
+                <button class="carousel-btn" data-prev hidden aria-label="Previous slide">&larr;</button>
+                <button class="carousel-btn" data-next hidden aria-label="Next slide">&rarr;</button>
+                <span class="carousel-counter" hidden aria-hidden="true">1&#8202;/&#8202;2</span>
+                <div class="carousel-captions" aria-live="polite">
+                  <p><span class="fig">Fig. 4</span> &mdash; The agent steering the marble through the maze, live.</p>
+                  <p hidden><span class="fig">Fig. 5</span> &mdash; The motorised labyrinth rig.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-text">
+            <h3>Real-Time Reinforcement-Learning Marble Labyrinth</h3>
+            <p class="meta-line">DreamerV3 &middot; YOLOv5 &middot; Arduino &middot; 45 Hz control loop</p>
+            <p>An online reinforcement-learning system that learns to play a wooden marble
+               labyrinth &mdash; the classic toy where two knobs tilt the board to steer a
+               marble past holes. Stepper motors bolted to the knobs actuate the board,
+               a camera with YOLOv5 tracking follows the marble, and DreamerV3 learns on
+               the physical hardware from scratch.</p>
+            <p>A 3D-printed re-loader returns the marble after each attempt so training runs
+               unsupervised, and the training loop is patched so gradient updates only run
+               between physical episodes, preserving the 45&nbsp;Hz control deadline during
+               live training.</p>
+          </div>
+        </article>
+
+        <article class="project">
+          <div class="project-media">
+            <div class="carousel" data-carousel tabindex="0" role="region" aria-roledescription="carousel" aria-label="Robotic arm media">
+              <ul class="carousel-track" role="presentation">
+                <li class="carousel-slide">
+                  <span class="video-tag">Video</span>
+                  <video controls preload="none" playsinline aria-label="The robotic arm running through a motion sequence" poster="assets/img/arm-poster.jpg" width="608" height="1080">
+                    <source src="assets/video/robotic-arm.mp4" type="video/mp4">
+                  </video>
+                </li>
+              </ul>
+              <div class="carousel-bar">
+                <button class="carousel-btn" data-prev hidden aria-label="Previous slide">&larr;</button>
+                <button class="carousel-btn" data-next hidden aria-label="Next slide">&rarr;</button>
+                <span class="carousel-counter" hidden aria-hidden="true">1&#8202;/&#8202;1</span>
+                <div class="carousel-captions" aria-live="polite">
+                  <p><span class="fig">Fig. 6</span> &mdash; The arm running through a motion sequence.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="project-text">
+            <h3>Robotic Arm</h3>
+            <p class="meta-line">CAD &middot; 3D printing &middot; Inverse kinematics &middot; 4 DOF</p>
+            <!-- TODO: Luca — happy to expand this with drive electronics and
+                 what the arm is shown doing in the video. -->
+            <p>A four-degree-of-freedom servo arm, designed and 3D-printed from scratch,
+               with inverse kinematics to position the end effector.</p>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- 02 — Research & Education -->
+    <section id="research" class="section accent-blue">
+      <div class="wrap">
+        <h2><span class="sec-num">02</span> &mdash; Research &amp; Education</h2>
+
+        <div class="entry">
+          <p class="meta-line">Preprint, 2026</p>
+          <h3 class="entry-title">Wake Up to the Past: Using Memory to Model Fluid Wake Effects on Robots</h3>
+          <p>L.&nbsp;Vendruscolo, E.&nbsp;Sebasti&aacute;n, A.&nbsp;Prorok, A.&nbsp;Shankar.
+             We show that agile wake effects on robots cannot be accurately predicted from instantaneous
+             state alone, and that giving models memory of past states cuts prediction error
+             across simulation and real hardware &mdash; including on the gantry above.
+             <a href="https://arxiv.org/abs/2603.22472">arXiv:2603.22472<span class="ext" aria-hidden="true">&#8599;</span></a></p>
+        </div>
+
+        <div class="entry">
+          <p class="meta-line">2025 &mdash; 2026</p>
+          <h3 class="entry-title">University of Cambridge</h3>
+          <p>MPhil, Advanced Computer Science.</p>
+        </div>
+
+        <div class="entry">
+          <p class="meta-line">2022 &mdash; 2025</p>
+          <h3 class="entry-title">Queen Mary University of London</h3>
+          <p>BSc Computer Science, First Class Honours.</p>
+        </div>
+
+        <div class="entry">
+          <p class="meta-line">2022 &mdash; present</p>
+          <h3 class="entry-title">Tutoring</h3>
+          <p>Over 1000 hours of maths and computer science tutoring, run on a booking and
+             payments platform I built.
+             <a href="https://tutoring-luca.vercel.app/">tutoring-luca.vercel.app<span class="ext" aria-hidden="true">&#8599;</span></a></p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 03 — Contact -->
+    <section id="contact" class="section accent-terra">
+      <div class="wrap">
+        <h2><span class="sec-num">03</span> &mdash; Contact</h2>
+        <p>The quickest way to reach me is by email:
+           <a href="mailto:lucavendruscolo3@gmail.com">lucavendruscolo3@gmail.com</a></p>
+        <p class="link-row">
+          <a href="https://github.com/LucaVendruscolo">GitHub</a> &middot;
+          <a href="https://www.linkedin.com/in/luca-vendruscolo-2707b2217/">LinkedIn</a> &middot;
+          <a href="https://arxiv.org/abs/2603.22472">arXiv<span class="ext" aria-hidden="true">&#8599;</span></a> &middot;
+          <a href="https://tutoring-luca.vercel.app/">Tutoring<span class="ext" aria-hidden="true">&#8599;</span></a>
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>&copy; 2026 Luca Vendruscolo &middot; built by hand, no framework.</p>
+    </div>
+  </footer>
+
+  <script src="js/carousel.js"></script>
+</body>
+</html>
