@@ -248,6 +248,8 @@ a:hover { text-decoration-color: var(--accent); }
 
 /* --- carousel ------------------------------------------------------------ */
 
+.carousel-frame { position: relative; }
+
 .carousel-track {
   list-style: none;
   background: var(--bg-inset);
@@ -269,6 +271,11 @@ a:hover { text-decoration-color: var(--accent); }
   object-fit: contain;
 }
 
+.carousel-slide img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .video-tag {
   position: absolute;
   top: var(--s2);
@@ -288,6 +295,7 @@ a:hover { text-decoration-color: var(--accent); }
 .js .carousel-track {
   display: flex;
   overflow: hidden;
+  touch-action: pan-y;   /* horizontal swipes drive the carousel, vertical still scrolls */
 }
 .js .carousel-slide {
   flex: 0 0 100%;
@@ -308,22 +316,24 @@ a:hover { text-decoration-color: var(--accent); }
   min-height: 36px;
 }
 
-.carousel-btn {
-  width: 36px;
-  min-height: 36px;
-  align-self: stretch;   /* separator hairline spans the bar even when captions wrap */
-  flex: none;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--rule);
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  background: var(--bg);
+  border: 1px solid var(--ink);
   color: var(--ink);
-  font-size: 15px;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
+  z-index: 2;
   transition: background-color 120ms linear;
 }
-.carousel-btn:hover { background: var(--bg-inset); }
-.carousel-btn:disabled { color: var(--rule); cursor: default; }
-.carousel-btn:disabled:hover { background: transparent; }
+.carousel-arrow:hover { background: var(--bg-inset); }
+.carousel-arrow[data-prev] { left: var(--s3); }
+.carousel-arrow[data-next] { right: var(--s3); }
 
 .carousel-counter {
   padding: 0 var(--s3);

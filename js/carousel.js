@@ -48,6 +48,21 @@ function initCarousel(root) {
       if (e.key === "ArrowLeft") { goTo(index - 1); e.preventDefault(); }
       if (e.key === "ArrowRight") { goTo(index + 1); e.preventDefault(); }
     });
+
+    // swipe / drag on the media itself
+    var track = root.querySelector(".carousel-track");
+    var startX = null;
+    track.addEventListener("pointerdown", function (e) {
+      if (e.target.tagName === "VIDEO") return;
+      startX = e.clientX;
+    });
+    track.addEventListener("pointerup", function (e) {
+      if (startX === null) return;
+      var dx = e.clientX - startX;
+      startX = null;
+      if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1));
+    });
+    track.addEventListener("pointercancel", function () { startX = null; });
   }
 
   // hide the VIDEO tag while its video is playing
