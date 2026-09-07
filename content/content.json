@@ -1,0 +1,148 @@
+{
+  "_note": "Source of truth for copy and CV rows in /a/. Not linked from any page. Luca: rewrite any sentence here in your own words, then mirror the change in a/index.html.",
+  "person": {
+    "name": "Luca Vendruscolo",
+    "role_line": "Robotics and machine learning: temporal prediction, real-time control and deployable ML for physical systems.",
+    "location": "Cambridge / London",
+    "languages": "English and Italian",
+    "email": "lucavendruscolo3@gmail.com",
+    "github": "https://github.com/LucaVendruscolo",
+    "linkedin": "https://www.linkedin.com/in/luca-vendruscolo-2707b2217/",
+    "arxiv_id": "2603.22472",
+    "arxiv_url": "https://arxiv.org/abs/2603.22472",
+    "tutoring_url": "https://tutoring-luca.vercel.app/"
+  },
+  "hero": {
+    "sentence": "Robotics and machine learning researcher."
+  },
+  "about": [
+    "In 2026 I graduated with Distinction from the MPhil in Advanced Computer Science at the University of Cambridge, where I worked in Amanda Prorok's lab. Before that I did Computer Science at Queen Mary University of London and graduated with a First. I live between Cambridge and London and speak English and Italian.",
+    "I like building physical systems that have to work in real time. The two rigs below are examples: one keeps a small monocopter level while another one's wake hits it, the other learns to steer a marble through a wooden labyrinth."
+  ],
+  "paper": {
+    "short_title": "Wake Up to the Past",
+    "full_title": "Wake Up to the Past: Using Memory to Model Fluid Wake Effects on Robots",
+    "authors": [
+      "Luca Vendruscolo",
+      "Eduardo Sebastián",
+      "Amanda Prorok",
+      "Ajay Shankar"
+    ],
+    "venue": "Preprint, March 2026",
+    "arxiv": "2603.22472",
+    "claim": [
+      "When one robot flies or swims through the wake another robot has left, the disturbance it feels depends on what the fluid was doing a moment ago. We measured this on a gantry: a tethered monocopter is moved through the downwash of another one while a time-of-flight sensor records its altitude.",
+      "Models that only see the current state get the disturbance wrong. Giving them a short history of past states, and having them estimate the transport delay, improves prediction substantially across quadrotor CFD, ship interaction, fish schooling, a 2D drone simulation and the real hardware.",
+      "Across the seven architectures we compared, models with memory cut RMSE by 35% on quadrotor CFD, 39% in closed-loop 2D drone tracking and 21% on the gantry hardware."
+    ],
+    "figures": [
+      {
+        "type": "video",
+        "src": "/assets/video/gantry-rig.mp4",
+        "poster": "/assets/img/gantry-poster.jpg",
+        "w": 1080,
+        "h": 986,
+        "caption": "2025. The gantry that produced the hardware data. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one."
+      },
+      {
+        "type": "image",
+        "src": "/assets/img/gantry-labeled.webp",
+        "w": 1056,
+        "h": 1049,
+        "alt": "Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor.",
+        "caption": "The gantry. The monocopter at the top produces the wake; the second one sits on a vertical rail on a carriage that moves beneath it."
+      },
+      {
+        "type": "video",
+        "src": "/assets/video/drones.mp4",
+        "poster": "/assets/img/drones-poster.jpg",
+        "w": 1280,
+        "h": 720,
+        "caption": "Two quadrotors in the flight arena, the lower one flying in the downwash of the other."
+      }
+    ],
+    "research_link": "The rig that produced the hardware data is the first project below."
+  },
+  "projects": [
+    {
+      "id": "labyrinth",
+      "spec": "DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.",
+      "prose": [
+        "An online reinforcement-learning system that learns to play a wooden marble labyrinth, the toy where two knobs tilt the board to steer the marble. Stepper motors attached to the knobs tilt the board, a camera with YOLOv5 tracks the marble, and DreamerV3 learns from experience.",
+        "A 3D-printed re-loader returns the marble after every attempt so training can run unsupervised. I changed the training loop so gradient updates only happen between episodes, which allows the controller to run at 45 Hz during live training."
+      ],
+      "media": {
+        "src": "/assets/video/marble-maze.mp4",
+        "poster": "/assets/img/maze-poster.jpg",
+        "w": 960,
+        "h": 544
+      },
+      "extra_image": {
+        "src": "/assets/img/marble-maze.webp",
+        "w": 1200,
+        "h": 900,
+        "alt": "The wooden marble labyrinth with stepper motors mounted on its two control knobs.",
+        "caption": "The board with the two steppers on its knobs and the re-loader at the corner."
+      },
+      "caption": "The agent steering the marble through the maze.",
+      "title": "Reinforcement-learning marble labyrinth"
+    },
+    {
+      "id": "arm",
+      "spec": "2024. Four degrees of freedom, inverse kinematics, CAD and 3D printing.",
+      "prose": [
+        "A four-degree-of-freedom servo arm, designed in CAD and 3D-printed, with inverse kinematics."
+      ],
+      "media": {
+        "src": "/assets/video/robotic-arm.mp4",
+        "poster": "/assets/img/arm-poster.jpg",
+        "w": 608,
+        "h": 1080
+      },
+      "caption": "The arm running through a motion sequence.",
+      "title": "Robotic arm",
+      "year": 2024
+    }
+  ],
+  "cv": {
+    "education": [
+      {
+        "years": "2025–2026",
+        "title": "University of Cambridge",
+        "detail": "MPhil in Advanced Computer Science, graduated with Distinction, ranked 7th of 50. Supervised by Amanda Prorok."
+      },
+      {
+        "years": "2022–2025",
+        "title": "Queen Mary University of London",
+        "detail": "BSc Computer Science, First Class Honours. Thesis: Critic-Guided Learning Rate Adaptation for Sample-Efficient Reinforcement Learning."
+      }
+    ],
+    "experience": [
+      {
+        "years": "2023–2024",
+        "title": "Insilico Medicine, Hong Kong",
+        "detail": "Intern, then junior research scientist. Ranked age-related genes using graph neural networks, XGBoost and gene interaction networks on PandaOmics data, working with teams in Hong Kong and Abu Dhabi."
+      },
+      {
+        "years": "2022–",
+        "title": "Academic tutor",
+        "detail": "Over 1000 hours of maths, computer science and physics tutoring, run on a booking and payments platform I built with Next.js, Supabase and Stripe."
+      }
+    ],
+    "awards": [
+      {
+        "years": "2024",
+        "title": "AstonHack9, Best AI Submission",
+        "detail": "A real-time projector game driven by silhouette detection."
+      },
+      {
+        "years": "2020",
+        "title": "FIRST Tech Challenge World Championship, Judges' Award",
+        "detail": "Team captain from 2018 to 2020. UK National Champions, then the Judges' Award at the World Championship in Detroit."
+      }
+    ]
+  },
+  "contact": {
+    "line": "The quickest way to reach me is email."
+  }
+}
