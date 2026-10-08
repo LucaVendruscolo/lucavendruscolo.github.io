@@ -63,6 +63,7 @@
     ],
     "research_link": "The rig that produced the hardware data is the first project below."
   },
+  "projects_heading": "Fun side projects",
   "projects": [
     {
       "id": "labyrinth",

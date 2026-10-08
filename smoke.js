@@ -69,6 +69,8 @@ const ASSIST = 0.05;           // markers ahead of the body drift off the stagna
 const SPLIT = 1.6, MERGE = 0.5, SPLIT_FADE = 0.85;   // marker spacing bounds (times s) and thinning per split
 const KINK = 0.26, KINK_W = 0.55;   // a turn sharper than about 75 degrees is a fold in the line, not a curve in the flow
 const ALPHA = [0.06, 0.12, 0.19, 0.26, 0.33, 0.4];   // ink, darkest where the smoke is thickest
+const WARM_DT = 0.1;           // s, step of the hidden warm-up
+const WARM_PAD = 4;            // s, warm-up beyond the time the air takes from the body's back to the right edge
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 function rgb(hex, fallback) {
@@ -87,8 +89,12 @@ function hull(pts) {  // Andrew's monotone chain
   lo.pop(); up.pop();
   return lo.concat(up);
 }
+// back-to-back tasks: the warm-up gets most of the thread but input and paint still come between slices
+const chan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
+const tasks = [];
+if (chan) chan.port1.onmessage = () => { const fn = tasks.shift(); if (fn) fn(); };
 function schedule(fn) {
-  if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 80 }); else setTimeout(() => fn(null), 0);
+  if (chan) { tasks.push(fn); chan.port2.postMessage(0); } else setTimeout(fn, 0);
 }
 
 export function createSmoke(opts) {
@@ -117,7 +123,7 @@ export function createSmoke(opts) {
   let simT = 0;
   const ptr = { x: 0, y: 0, vx: 0, vy: 0, t: -1e9, on: false };
   // loop
-  let raf = 0, last = 0, held = false, hidden = false, visible = true, warmed = false;
+  let raf = 0, last = 0, held = false, hidden = false, visible = true, warmed = false, gen = 0;
   let stepMs = 0, fluidMs = 0, slowN = 0, degraded = 0, frameN = 0, acc = 0;
   let lastW = 0, lastH = 0, resizeT = 0, io = null;
   const out = { x: 0, y: 0 };
@@ -662,13 +668,14 @@ export function createSmoke(opts) {
   }
   function loop() { if (!raf && warmed && !held && !hidden && visible) { last = 0; raf = requestAnimationFrame(frame); } }
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; last = 0; }
-  function warm(done) {   // let the body start shedding before the canvas is shown
+  // let the body start shedding, and its wake reach the right edge, before the canvas is shown
+  function warm(done) {
     let i = 0;
-    const total = 320, wdt = 0.06;
-    const slice = (dl) => {
-      const budget = dl && dl.timeRemaining ? Math.max(4, dl.timeRemaining()) : 12;
+    const total = has ? clamp(Math.ceil(((W - xr) / U0 + WARM_PAD) / WARM_DT), 40, 110) : 40, g = ++gen;
+    const slice = () => {
+      if (g !== gen) return;
       const t0 = performance.now();
-      while (i < total && performance.now() - t0 < budget) { simT += wdt; fluid(wdt, -1e9); moveLines(wdt); i++; }
+      while (i < total && performance.now() - t0 < 12) { simT += WARM_DT; fluid(WARM_DT, -1e9); moveLines(WARM_DT); i++; }
       if (i < total) schedule(slice); else { draw(false); warmed = true; done(); }
     };
     schedule(slice);
@@ -706,6 +713,7 @@ export function createSmoke(opts) {
     setObstacles(r) { setObstacles(r); },
     destroy() {
       stop();
+      gen++;
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('pointerleave', onLeave);

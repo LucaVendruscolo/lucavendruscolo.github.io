@@ -40,8 +40,12 @@ try { canRun = !!document.createElement('canvas').getContext('2d'); } catch (e) 
 async function startSmoke() {
   if (smoke || !canRun) return;
   const mod = await import('./smoke.js');
-  smoke = mod.createSmoke({ canvas, hero, coarse, measure, dpr: capture ? Math.min(devicePixelRatio || 1, 2) : 0, onWarm() { hero.classList.add('live'); } });
-  if (!smoke) { canRun = false; return; }
+  smoke = mod.createSmoke({ canvas, hero, coarse, measure, dpr: capture ? Math.min(devicePixelRatio || 1, 2) : 0, onWarm() {
+    hero.classList.add('live');
+    heroLive = true;
+    if (wide.matches) startDownwash();   // warm the CV smoke in idle time now, so it is ready on arrival
+  } });
+  if (!smoke) { canRun = false; html.classList.remove('anim'); return; }
   window.__smoke = smoke;
   await document.fonts.ready;
   if (capture) {
@@ -55,15 +59,17 @@ async function startSmoke() {
 function stopSmoke() {
   if (!smoke) return;
   smoke.destroy(); smoke = null;
+  heroLive = false;
   hero.classList.remove('live');
 }
-// ---- the CV smoke: loaded once the section is within a viewport, only on wide layouts ----
-let downwash = null, cvNear = false;
+// ---- the CV smoke: only on wide layouts. Warmed in idle time once the hero is live, and in
+// earnest once the section is within a viewport ----
+let downwash = null, cvNear = false, heroLive = false;
 async function startDownwash() {
-  if (downwash || !canRun || !cvNear || !wide.matches) return;
+  if (downwash || !canRun || !(cvNear || heroLive) || !wide.matches) return;
   const mod = await import('./downwash.js');
   if (downwash || userPaused() || lowTier() || !wide.matches) return;
-  downwash = mod.createDownwash({ canvas: cvCanvas, coarse, onWarm() { cv.classList.add('live'); } });
+  downwash = mod.createDownwash({ canvas: cvCanvas, coarse, background: !cvNear, onWarm() { cv.classList.add('live'); } });
   if (!downwash) return;
   window.__downwash = downwash;
   downwash.start();
@@ -75,11 +81,14 @@ function stopDownwash() {
 }
 new IntersectionObserver(es => {
   cvNear = es[0].isIntersecting;
-  if (cvNear && canRun && !lowTier() && !userPaused()) startDownwash();
+  if (cvNear && downwash) downwash.hurry();
+  else if (cvNear && canRun && !lowTier() && !userPaused()) startDownwash();
 }, { rootMargin: '100%' }).observe(cv);
 
 function applyTier() {
   const paused = userPaused();
+  // the still stands in for the smoke only when the smoke will not run; otherwise the hero opens on paper
+  html.classList.toggle('anim', canRun && !lowTier() && !paused);
   if (canRun && !lowTier()) {
     pauseBtn.hidden = false;
     pauseBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');

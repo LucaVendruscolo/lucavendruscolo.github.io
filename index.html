@@ -14,7 +14,10 @@
 <meta property="og:image:height" content="630">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23101619' d='M3 5h5v17h7v5H3zM15 5h4.8l3.2 13 3.2-13H31l-5.6 22h-5.2z'/%3E%3C/svg%3E">
 <link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css">
+<script>try{var n=navigator,c=n.connection,s=null;try{s=localStorage.getItem('a:smoke')}catch(e){}if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&!(n.deviceMemory&&n.deviceMemory<4)&&s!=='paused'&&document.createElement('canvas').getContext('2d'))document.documentElement.classList.add('anim')}catch(e){}</script>
+<link rel="modulepreload" href="/smoke.js">
 <script type="module" src="page.js"></script>
 </head>
 <body>
@@ -26,8 +29,8 @@
     <ul>
       <li><a href="#about">About</a></li>
       <li><a href="#research">Research</a></li>
-      <li><a href="#projects">Projects</a></li>
       <li><a href="#cv">CV</a></li>
+      <li><a href="#projects">Projects</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
   </nav>
@@ -56,73 +59,58 @@
   </div>
 </section>
 
-<section id="research" class="g">
-  <div class="paper">
-    <h2>Wake Up to the Past</h2>
-    <p class="title"><em>Wake Up to the Past: Using Memory to Model Fluid Wake Effects on Robots</em></p>
-    <p class="authors">Luca Vendruscolo, Eduardo Sebastián, Amanda Prorok and Ajay Shankar. Preprint, March 2026, <a href="https://arxiv.org/abs/2603.22472">arXiv:2603.22472</a>.</p>
-    <p>When one robot flies or swims through the wake another robot has left, the disturbance it feels depends on what the fluid was doing a moment ago. We measured this on a gantry: a tethered monocopter is moved through the downwash of another one while a time-of-flight sensor records its altitude.</p>
-    <p>Models that only see the current state get the disturbance wrong. Giving them a short history of past states, and having them estimate the transport delay, improves prediction substantially across quadrotor CFD, ship interaction, fish schooling, a 2D drone simulation and the real hardware.</p>
-    <p>Across the seven architectures we compared, models with memory cut RMSE by 35% on quadrotor CFD, 39% in closed-loop 2D drone tracking and 21% on the gantry hardware.</p>
-  </div>
-
-  <figure class="fig rig">
-    <video poster="/assets/img/gantry-poster.jpg" playsinline muted loop preload="none" width="1080" height="986" controls>
-      <source src="/assets/video/gantry-rig.mp4" type="video/mp4">
-    </video>
-    <figcaption>2025. The gantry that produced the hardware data. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
-  </figure>
-
-  <figure class="fig plan">
-    <img src="/assets/img/gantry-labeled.webp" alt="Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor." width="1056" height="1049" loading="lazy" decoding="async">
-    <figcaption>The gantry. The monocopter at the top produces the wake; the second one sits on a vertical rail on a carriage that moves beneath it.</figcaption>
-  </figure>
-
-  <figure class="fig drones">
-    <video poster="/assets/img/drones-poster.jpg" playsinline muted loop preload="none" width="1280" height="720" controls>
-      <source src="/assets/video/drones.mp4" type="video/mp4">
-    </video>
-    <figcaption>Two quadrotors in the flight arena, the lower one flying in the downwash of the other. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
-  </figure>
-</section>
-
-<section id="projects">
-  <h2 class="g">Projects</h2>
-
-  <article class="g proj maze">
-    <div class="head">
-      <h3>Reinforcement-learning marble labyrinth</h3>
-      <p class="spec">2025. DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.</p>
+<section id="research">
+  <article class="g work wake">
+    <div class="text">
+      <h2>Wake Up to the Past</h2>
+      <p class="title"><em>Wake Up to the Past: Using Memory to Model Fluid Wake Effects on Robots</em></p>
+      <p class="authors">Luca Vendruscolo, Eduardo Sebastián, Amanda Prorok and Ajay Shankar. Preprint, March 2026, <a href="https://arxiv.org/abs/2603.22472">arXiv:2603.22472</a>.</p>
+      <p>When one robot flies or swims through the wake another robot has left, the disturbance it feels depends on what the fluid was doing a moment ago. We measured this on a gantry: a tethered monocopter is moved through the downwash of another one while a time-of-flight sensor records its altitude.</p>
+      <p>Models that only see the current state get the disturbance wrong. Giving them a short history of past states, and having them estimate the transport delay, improves prediction substantially across quadrotor CFD, ship interaction, fish schooling, a 2D drone simulation and the real hardware.</p>
+      <p>Across the seven architectures we compared, models with memory cut RMSE by 35% on quadrotor CFD, 39% in closed-loop 2D drone tracking and 21% on the gantry hardware.</p>
     </div>
-    <div class="media">
-      <figure class="wide">
+    <figure class="diagram">
+      <img src="/assets/img/gantry-labeled.webp" alt="Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor." width="1056" height="1049" loading="lazy" decoding="async">
+      <figcaption>The gantry. The monocopter at the top produces the wake; the second one sits on a vertical rail on a carriage that moves beneath it.</figcaption>
+    </figure>
+    <div class="strip">
+      <figure>
+        <video poster="/assets/img/gantry-poster.jpg" playsinline muted loop preload="none" width="1080" height="986" controls>
+          <source src="/assets/video/gantry-rig.mp4" type="video/mp4">
+        </video>
+        <figcaption>2025. The gantry that produced the hardware data. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+      </figure>
+      <figure>
+        <video poster="/assets/img/drones-poster.jpg" playsinline muted loop preload="none" width="1280" height="720" controls>
+          <source src="/assets/video/drones.mp4" type="video/mp4">
+        </video>
+        <figcaption>Two quadrotors in the flight arena, the lower one flying in the downwash of the other. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <article class="g work maze">
+    <div class="text">
+      <h2><span class="nw">Reinforcement-learning</span> marble labyrinth</h2>
+      <p class="spec">2025. DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.</p>
+      <p>An online reinforcement-learning system that learns to play a wooden marble labyrinth, the toy where two knobs tilt the board to steer the marble. Stepper motors attached to the knobs tilt the board, a camera with YOLOv5 tracks the marble, and DreamerV3 learns from experience.</p>
+      <p>A 3D-printed re-loader returns the marble after every attempt so training can run unsupervised. I changed the training loop so gradient updates only happen between episodes, which allows the controller to run at 45 Hz during live training.</p>
+    </div>
+    <figure class="diagram">
+      <!-- swap this placeholder for <img src="..." alt="..." width="..." height="..."> when the diagram is ready -->
+      <div class="placeholder">Diagram: how the labyrinth works (coming soon)</div>
+    </figure>
+    <div class="strip">
+      <figure>
         <video poster="/assets/img/maze-poster.jpg" playsinline muted loop preload="none" width="960" height="544" controls>
           <source src="/assets/video/marble-maze.mp4" type="video/mp4">
         </video>
         <figcaption>The agent steering the marble through the maze. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
       </figure>
-      <figure class="board">
+      <figure>
         <img src="/assets/img/marble-maze.webp" alt="The wooden marble labyrinth on a desk with stepper motors mounted on its two control knobs, a bench power supply and an Arduino beside it." width="1200" height="900" loading="lazy" decoding="async">
         <figcaption>The board with the two steppers on its knobs and the re-loader at the corner.</figcaption>
       </figure>
-    </div>
-    <div class="text">
-      <p>An online reinforcement-learning system that learns to play a wooden marble labyrinth, the toy where two knobs tilt the board to steer the marble. Stepper motors attached to the knobs tilt the board, a camera with YOLOv5 tracks the marble, and DreamerV3 learns from experience.</p>
-      <p>A 3D-printed re-loader returns the marble after every attempt so training can run unsupervised. I changed the training loop so gradient updates only happen between episodes, which allows the controller to run at 45 Hz during live training.</p>
-    </div>
-  </article>
-
-  <article class="g proj arm">
-    <figure>
-      <video poster="/assets/img/arm-poster.jpg" playsinline muted loop preload="none" width="608" height="1080" controls>
-        <source src="/assets/video/robotic-arm.mp4" type="video/mp4">
-      </video>
-      <figcaption>The arm running through a motion sequence. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
-    </figure>
-    <div class="text">
-      <h3>Robotic arm</h3>
-      <p class="spec">2024. Four degrees of freedom, inverse kinematics, CAD and 3D printing.</p>
-      <p>A four-degree-of-freedom servo arm, designed in CAD and 3D-printed, with inverse kinematics.</p>
     </div>
   </article>
 </section>
@@ -148,6 +136,23 @@
       <div><dt>2024</dt><dd><span class="t">AstonHack9, Best AI Submission</span><span class="d">A real-time projector game driven by silhouette detection.</span></dd></div>
       <div><dt>2020</dt><dd><span class="t">FIRST Tech Challenge World Championship, Judges' Award</span><span class="d">Team captain from 2018 to 2020. UK National Champions, then the Judges' Award at the World Championship in Detroit.</span></dd></div>
     </dl>
+  </div>
+</section>
+
+<section id="projects" class="g">
+  <h2>Fun side projects</h2>
+  <div class="side">
+    <article class="card">
+      <figure class="frame">
+        <video poster="/assets/img/arm-poster.jpg" playsinline muted loop preload="none" width="608" height="1080" controls>
+          <source src="/assets/video/robotic-arm.mp4" type="video/mp4">
+        </video>
+        <figcaption>The arm running through a motion sequence. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+      </figure>
+      <h3>Robotic arm</h3>
+      <p class="spec">2024. Four degrees of freedom, inverse kinematics, CAD and 3D printing.</p>
+      <p>A four-degree-of-freedom servo arm, designed in CAD and 3D-printed, with inverse kinematics.</p>
+    </article>
   </div>
 </section>
 

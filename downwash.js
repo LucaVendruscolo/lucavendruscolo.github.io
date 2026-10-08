@@ -96,6 +96,8 @@ export function createDownwash(opts) {
   // smoke grid: dnx x dny cells of dcell px, no border; cell (i, j) is centred at ((i + .5) dcell, (j + .5) dcell)
   let dnx = 0, dny = 0, dcell = 3;
   let d = null, d2 = null, mask = null, img = null;
+  // where each smoke cell's departure point lands this step: base index (-1 for none) and bilinear weights
+  let dA = null, dFx = null, dFy = null;
   const alut = new Float32Array(1025);
   for (let n = 0; n <= 1024; n++) alut[n] = ALPHA_MAX * (1 - Math.exp(-ALPHA_K * n / 256));
   // the drone
@@ -126,6 +128,7 @@ export function createDownwash(opts) {
     for (let i = 1; i <= nx; i++) { solBase[i] = 4; solBase[(ny + 1) * st + i] = 4; }
     dcell = CELL / DYE; dnx = nx * DYE; dny = ny * DYE;
     d = new Float32Array(dnx * dny); d2 = new Float32Array(dnx * dny); mask = new Float32Array(dnx * dny);
+    dA = new Int32Array(dnx * dny); dFx = new Float64Array(dnx * dny); dFy = new Float64Array(dnx * dny);
     for (let j = 0; j < dny; j++) {
       const y = (j + 0.5) * dcell;
       const fy = smooth((H - y) / (FADE_B * H)) * smooth(y / (FADE_T * H));
@@ -426,27 +429,35 @@ export function createDownwash(opts) {
   }
 
   // ---- smoke ----
-  function sampleDye(x, y) {
-    const gx = x / dcell - 0.5, gy = y / dcell - 0.5;
-    if (gx < -1 || gx > dnx || gy < -1 || gy > dny) return 0;
-    let i = Math.floor(gx), j = Math.floor(gy);
-    let fx = gx - i, fy = gy - j;
-    if (i < 0) { i = 0; fx = 0; } else if (i >= dnx - 1) { i = dnx - 2; fx = 1; }
-    if (j < 0) { j = 0; fy = 0; } else if (j >= dny - 1) { j = dny - 2; fy = 1; }
-    const a = j * dnx + i, b = a + dnx;
-    return (d[a] * (1 - fx) + d[a + 1] * fx) * (1 - fy) + (d[b] * (1 - fx) + d[b + 1] * fx) * fy;
-  }
-
-  function advectDye(dt) {
-    const dec = Math.exp(-dt / DISS);
+  // The flow is fixed for the length of a step, so every substep traces each smoke cell back to the
+  // same point: find those points once (midpoint rule), then each substep only reads the smoke there
+  function traceDye(dt) {
+    const r = 30 + 2 * CELL, bx0 = D.x - r, bx1 = D.x + r, by0 = D.y - r, by1 = D.y + r;
     for (let j = 0; j < dny; j++) {
       const y = (j + 0.5) * dcell;
       for (let i = 0; i < dnx; i++) {
         const x = (i + 0.5) * dcell, k = j * dnx + i;
+        if (x > bx0 && x < bx1 && y > by0 && y < by1 && solidAt(x, y)) { dA[k] = -1; continue; }
         sampleGrid(x, y);
         sampleGrid(x - 0.5 * dt * sx, y - 0.5 * dt * sy);
-        d2[k] = solidAt(x, y) ? 0 : sampleDye(x - dt * sx, y - dt * sy) * dec;
+        const gx = (x - dt * sx) / dcell - 0.5, gy = (y - dt * sy) / dcell - 0.5;
+        if (gx < -1 || gx > dnx || gy < -1 || gy > dny) { dA[k] = -1; continue; }
+        let a = Math.floor(gx), b = Math.floor(gy);
+        let fx = gx - a, fy = gy - b;
+        if (a < 0) { a = 0; fx = 0; } else if (a >= dnx - 1) { a = dnx - 2; fx = 1; }
+        if (b < 0) { b = 0; fy = 0; } else if (b >= dny - 1) { b = dny - 2; fy = 1; }
+        dA[k] = b * dnx + a; dFx[k] = fx; dFy[k] = fy;
       }
+    }
+  }
+
+  function advectDye(dt) {
+    const dec = Math.exp(-dt / DISS);
+    for (let k = 0, n = dnx * dny; k < n; k++) {
+      const a = dA[k];
+      if (a < 0) { d2[k] = 0; continue; }
+      const fx = dFx[k], fy = dFy[k], b = a + dnx;
+      d2[k] = ((d[a] * (1 - fx) + d[a + 1] * fx) * (1 - fy) + (d[b] * (1 - fx) + d[b + 1] * fx) * fy) * dec;
     }
     const t = d; d = d2; d2 = t;
   }
@@ -518,6 +529,7 @@ export function createDownwash(opts) {
     fluid(dt, simT);
     // long steps (half rate, warm-up) carry the smoke too far through the discs in one go and bead its edges
     const nsub = Math.min(3, Math.ceil(dt / 0.02));
+    traceDye(dt / nsub);
     for (let i = 0; i < nsub; i++) advectDye(dt / nsub);
     emit(dt, simT);
   }
@@ -561,19 +573,29 @@ export function createDownwash(opts) {
   function stop() { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }
 
   // ---- arrival: let the smoke cross before the canvas is shown ----
-  function warm(done) {
+  // Started early (opts.background) it runs in idle time only, so it never takes frames from the hero;
+  // hurry() switches it to back-to-back slices once the section is close
+  let urgent = !opts.background, gen = 0;
+  function warm(steps, done) {
     let i = 0;
+    const g = ++gen;
     const slice = (deadline) => {
+      if (g !== gen) return;
       const budget = deadline && deadline.timeRemaining ? Math.max(4, deadline.timeRemaining()) : 12;
       const t0 = performance.now();
-      while (i < 140 && performance.now() - t0 < budget) { step(0.05, performance.now()); i++; }
-      if (i < 140) schedule(slice);
+      while (i < steps && performance.now() - t0 < budget) { step(0.05, performance.now()); i++; }
+      if (i < steps) schedule(slice);
       else { draw(); warmed = true; done(); }
     };
     schedule(slice);
   }
+  const chan = typeof MessageChannel !== 'undefined' ? new MessageChannel() : null;
+  const tasks = [];
+  if (chan) chan.port1.onmessage = () => { const fn = tasks.shift(); if (fn) fn(null); };
   function schedule(fn) {
-    if (window.requestIdleCallback) requestIdleCallback(fn, { timeout: 80 }); else setTimeout(() => fn(null), 0);
+    if (!urgent && window.requestIdleCallback) requestIdleCallback(fn, { timeout: 80 });
+    else if (chan) { tasks.push(fn); chan.port2.postMessage(0); }
+    else setTimeout(() => fn(null), 0);
   }
 
   // ---- public ----
@@ -584,9 +606,11 @@ export function createDownwash(opts) {
     clearTimeout(sizeTimer);
     sizeTimer = setTimeout(() => {
       lastW = w; lastH = h;
+      const was = warmed;
+      stop(); warmed = false;
       rebuild();
-      for (let i = 0; i < 60; i++) step(0.05, performance.now());
-      if (warmed) draw();
+      draw();
+      warm(was ? 60 : 140, () => { if (!was && opts.onWarm) opts.onWarm(); loop(); });
     }, 150);
   }
   function onVisibility() { hidden = document.hidden; if (hidden) stop(); else loop(); }
@@ -603,8 +627,9 @@ export function createDownwash(opts) {
       if (window.ResizeObserver) { ro = new ResizeObserver(onResize); ro.observe(canvas); } else window.addEventListener('resize', onResize);
       io = new IntersectionObserver((es) => { visible = es[0].isIntersecting; if (visible) loop(); else stop(); }, { threshold: [0, 0.05] });
       io.observe(canvas);
-      warm(() => { if (opts.onWarm) opts.onWarm(); loop(); });
+      warm(140, () => { if (opts.onWarm) opts.onWarm(); loop(); });
     },
+    hurry() { urgent = true; },
     hold(h) { held = h; if (h) stop(); else loop(); },
     stats() {
       let vmax = 0, smoke = 0;
@@ -617,6 +642,7 @@ export function createDownwash(opts) {
     },
     destroy() {
       stop();
+      gen++;
       clearTimeout(sizeTimer);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerleave', onLeave);
