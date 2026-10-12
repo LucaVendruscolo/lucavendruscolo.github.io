@@ -16,7 +16,7 @@
 <link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/literata-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css">
-<script>try{var n=navigator,c=n.connection,s=null;try{s=localStorage.getItem('a:smoke')}catch(e){}if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&!(n.deviceMemory&&n.deviceMemory<4)&&s!=='paused'&&document.createElement('canvas').getContext('2d'))document.documentElement.classList.add('anim')}catch(e){}</script>
+<script>try{var n=navigator,c=n.connection;if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&!(n.deviceMemory&&n.deviceMemory<4)&&document.createElement('canvas').getContext('2d'))document.documentElement.classList.add('anim')}catch(e){}</script>
 <link rel="modulepreload" href="/smoke.js">
 <script type="module" src="page.js"></script>
 </head>
@@ -34,14 +34,9 @@
       <li><a href="#contact">Contact</a></li>
     </ul>
   </nav>
-  <button type="button" id="pause" aria-pressed="false" hidden>Pause the smoke</button>
 </header>
 
 <section id="top" class="hero" aria-labelledby="name">
-  <picture>
-    <source media="(max-width: 699px)" srcset="/assets/img/a-hero-still-m.webp" width="800" height="1440">
-    <img class="still" src="/assets/img/a-hero-still.webp" alt="" width="1600" height="1000">
-  </picture>
   <canvas id="smoke" aria-hidden="true"></canvas>
   <h1 id="name"><span>Luca</span> <span>Vendruscolo</span></h1>
   <p class="lede">Robotics and machine learning researcher.</p>
@@ -65,26 +60,25 @@
       <h2>Wake Up to the Past</h2>
       <p class="title"><em>Wake Up to the Past: Using Memory to Model Fluid Wake Effects on Robots</em></p>
       <p class="authors">Luca Vendruscolo, Eduardo Sebastián, Amanda Prorok and Ajay Shankar. Preprint, March 2026, <a href="https://arxiv.org/abs/2603.22472">arXiv:2603.22472</a>.</p>
-      <p>When one robot flies or swims through the wake another robot has left, the disturbance it feels depends on what the fluid was doing a moment ago. We measured this on a gantry: a tethered monocopter is moved through the downwash of another one while a time-of-flight sensor records its altitude.</p>
-      <p>Models that only see the current state get the disturbance wrong. Giving them a short history of past states, and having them estimate the transport delay, improves prediction substantially across quadrotor CFD, ship interaction, fish schooling, a 2D drone simulation and the real hardware.</p>
-      <p>Across the seven architectures we compared, models with memory cut RMSE by 35% on quadrotor CFD, 39% in closed-loop 2D drone tracking and 21% on the gantry hardware.</p>
+      <p>My MPhil thesis was on predicting wake effects between robots. Drones and underwater robots move by pushing air or water, and the wake they leave, like the downwash under a drone, can push nearby robots off course. Solving the fluid dynamics in real time is far too slow, so these disturbances are usually learned from data.</p>
+      <p>Existing models only look at where the robots are right now, but a wake takes time to travel, so the push a robot feels now was caused by what the other robot was doing in the past. Giving the models a short memory of recent motion cut prediction error by 21% to 67% across drones, ships, a fish-inspired water tank and a monocopter gantry I built to test it on real hardware. Building simple physics into the model also helps when data is limited, matching the baseline with a fifth of the parameters.</p>
     </div>
     <figure class="diagram">
-      <img src="/assets/img/gantry-labeled.webp" alt="Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor." width="1056" height="1049" loading="lazy" decoding="async">
-      <figcaption>The gantry. The monocopter at the top produces the wake; the second one sits on a vertical rail on a carriage that moves beneath it.</figcaption>
+      <video poster="/assets/img/gantry-poster.webp" playsinline muted loop preload="none" width="1080" height="986" controls>
+        <source src="/assets/video/gantry-rig.mp4" type="video/mp4">
+      </video>
+      <figcaption>The gantry I built to collect data and run closed-loop control experiments for testing the models. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one.</figcaption>
     </figure>
     <div class="strip">
       <figure>
-        <video poster="/assets/img/gantry-poster.jpg" playsinline muted loop preload="none" width="1080" height="986" controls>
-          <source src="/assets/video/gantry-rig.mp4" type="video/mp4">
-        </video>
-        <figcaption>2025. The gantry that produced the hardware data. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+        <img src="/assets/img/gantry-labeled.webp" alt="Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor." width="1056" height="1049" loading="lazy" decoding="async">
+        <figcaption>The gantry. The monocopter at the top produces the wake. The one below is free to move up and down on linear rails, and the whole carriage moves sideways on a belt-driven linear rail.</figcaption>
       </figure>
       <figure>
-        <video poster="/assets/img/drones-poster.jpg" playsinline muted loop preload="none" width="1280" height="720" controls>
+        <video poster="/assets/img/drones-poster.webp" playsinline muted loop preload="none" width="1280" height="720" controls>
           <source src="/assets/video/drones.mp4" type="video/mp4">
         </video>
-        <figcaption>Two quadrotors in the flight arena, the lower one flying in the downwash of the other. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+        <figcaption>I also tested the models on real quadrotors in the lab's flight arena, using its full OptiTrack motion-capture setup. Here the lower one flies in the downwash of the other.</figcaption>
       </figure>
     </div>
   </article>
@@ -92,20 +86,49 @@
   <article class="g work maze">
     <div class="text">
       <h2><span class="nw">Reinforcement-learning</span> marble labyrinth</h2>
-      <p class="spec">2025. DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.</p>
+      <p class="spec">2024. DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.</p>
       <p>An online reinforcement-learning system that learns to play a wooden marble labyrinth, the toy where two knobs tilt the board to steer the marble. Stepper motors attached to the knobs tilt the board, a camera with YOLOv5 tracks the marble, and DreamerV3 learns from experience.</p>
       <p>A 3D-printed re-loader returns the marble after every attempt so training can run unsupervised. I changed the training loop so gradient updates only happen between episodes, which allows the controller to run at 45 Hz during live training.</p>
     </div>
     <figure class="diagram">
-      <!-- swap this placeholder for <img src="..." alt="..." width="..." height="..."> when the diagram is ready -->
-      <div class="placeholder">Diagram: how the labyrinth works (coming soon)</div>
+      <video poster="/assets/img/maze-poster.webp" playsinline muted loop preload="none" width="960" height="544" controls>
+        <source src="/assets/video/marble-maze.mp4" type="video/mp4">
+      </video>
+      <figcaption>The agent steering the marble through the maze.</figcaption>
     </figure>
     <div class="strip">
-      <figure>
-        <video poster="/assets/img/maze-poster.jpg" playsinline muted loop preload="none" width="960" height="544" controls>
-          <source src="/assets/video/marble-maze.mp4" type="video/mp4">
-        </video>
-        <figcaption>The agent steering the marble through the maze. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
+      <figure class="maze-fig">
+        <div class="pipeline" id="mz">
+          <div class="fg-a-wrap">
+            <svg class="fg fg-a fg-wide" viewBox="0 -2 520 160" role="img" aria-label="(a) The control loop. The camera image goes to YOLOv5s, which finds the ball position p and the QR marker position m. These, their speeds and the next two waypoints form the 12-number observation o, with reward r. DreamerV3 outputs the action a, which the Arduino turns into knob angles theta for the two steppers on the labyrinth, and the camera sees the result. One step every 1/45 of a second."><defs><marker id="fg-head-w" class="fg-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0.6 L7.4 4 L0 7.4 Z"/></marker></defs><text class="fg-panel" x="0" y="11">(a) Control loop</text><g class="fg-arrow" data-w="0"><path d="M144 45 L186 45" marker-end="url(#fg-head-w)"/><text class="fg-al" x="165" y="39" text-anchor="middle">I<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="1"><path d="M333 45 L375 45" marker-end="url(#fg-head-w)"/><text class="fg-al" x="354" y="39" text-anchor="middle">p<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan>, m<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="2"><path d="M449 68 L449 109" marker-end="url(#fg-head-w)"/><text class="fg-al" x="442" y="93.5" text-anchor="end">o<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan>, r<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="3"><path d="M376 133 L334 133" marker-end="url(#fg-head-w)"/><text class="fg-al" x="355" y="127" text-anchor="middle">a<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="4"><path d="M187 133 L145 133" marker-end="url(#fg-head-w)"/><text class="fg-al" x="166" y="127" text-anchor="middle">θ<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="5"><path d="M71 110 L71 69" marker-end="url(#fg-head-w)"/></g><g class="fg-block" data-b="0"><rect x="0" y="24" width="142" height="42" rx="2"/><text class="fg-bt" x="71" y="42">Camera</text><text class="fg-bs" x="71" y="58">640 × 480 px</text></g><g class="fg-block" data-b="1"><rect x="189" y="24" width="142" height="42" rx="2"/><text class="fg-bt" x="260" y="42">YOLOv5s</text><text class="fg-bs" x="260" y="58">p<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="p">(504, 398)</tspan></text></g><g class="fg-block" data-b="2"><rect x="378" y="24" width="142" height="42" rx="2"/><text class="fg-bt" x="449" y="42">State, reward</text><text class="fg-bs" x="449" y="58">o<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> ∈ ℝ¹², r<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="r">+3.9</tspan></text></g><g class="fg-block" data-b="3"><rect x="378" y="112" width="142" height="42" rx="2"/><text class="fg-bt" x="449" y="130">DreamerV3</text><text class="fg-bs" x="449" y="146">a<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="a">(0.64, −0.21)</tspan></text></g><g class="fg-block" data-b="4"><rect x="189" y="112" width="142" height="42" rx="2"/><text class="fg-bt" x="260" y="130">Arduino</text><text class="fg-bs" x="260" y="146"><tspan data-v="cmd">Move,−19,6</tspan></text></g><g class="fg-block" data-b="5"><rect x="0" y="112" width="142" height="42" rx="2"/><text class="fg-bt" x="71" y="130">Labyrinth</text><text class="fg-bs" x="71" y="146">two steppers, ±30°</text></g><text class="fg-note" x="260" y="93">one step every 1/45 s</text><circle class="fg-token" r="3.5" cx="0" cy="0"/></svg>
+            <svg class="fg fg-a fg-narrow" viewBox="0 -2 340 250" role="img" aria-label="(a) The control loop. The camera image goes to YOLOv5s, which finds the ball position p and the QR marker position m. These, their speeds and the next two waypoints form the 12-number observation o, with reward r. DreamerV3 outputs the action a, which the Arduino turns into knob angles theta for the two steppers on the labyrinth, and the camera sees the result. One step every 1/45 of a second."><defs><marker id="fg-head-n" class="fg-head" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0.6 L7.4 4 L0 7.4 Z"/></marker></defs><text class="fg-panel" x="0" y="11">(a) Control loop</text><g class="fg-arrow" data-w="0"><path d="M152 46 L187 46" marker-end="url(#fg-head-n)"/><text class="fg-al" x="169.5" y="40" text-anchor="middle">I<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="1"><path d="M265 70 L265 109" marker-end="url(#fg-head-n)"/><text class="fg-al" x="258" y="94.5" text-anchor="end">p<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan>, m<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="2"><path d="M265 158 L265 197" marker-end="url(#fg-head-n)"/><text class="fg-al" x="258" y="182.5" text-anchor="end">o<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan>, r<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="3"><path d="M188 222 L153 222" marker-end="url(#fg-head-n)"/><text class="fg-al" x="170.5" y="216" text-anchor="middle">a<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="4"><path d="M75 198 L75 159" marker-end="url(#fg-head-n)"/><text class="fg-al" x="82" y="183.5" text-anchor="start">θ<tspan class="fg-s" dy="3.9" font-size="9.4">t</tspan><tspan dy="-3.9"> </tspan></text></g><g class="fg-arrow" data-w="5"><path d="M75 110 L75 71" marker-end="url(#fg-head-n)"/></g><g class="fg-block" data-b="0"><rect x="0" y="24" width="150" height="44" rx="2"/><text class="fg-bt" x="75" y="42">Camera</text><text class="fg-bs" x="75" y="58">640 × 480 px</text></g><g class="fg-block" data-b="1"><rect x="190" y="24" width="150" height="44" rx="2"/><text class="fg-bt" x="265" y="42">YOLOv5s</text><text class="fg-bs" x="265" y="58">p<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="p">(504, 398)</tspan></text></g><g class="fg-block" data-b="2"><rect x="190" y="112" width="150" height="44" rx="2"/><text class="fg-bt" x="265" y="130">State, reward</text><text class="fg-bs" x="265" y="146">o<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> ∈ ℝ¹², r<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="r">+3.9</tspan></text></g><g class="fg-block" data-b="3"><rect x="190" y="200" width="150" height="44" rx="2"/><text class="fg-bt" x="265" y="218">DreamerV3</text><text class="fg-bs" x="265" y="234">a<tspan class="fg-s" dy="3.6" font-size="8.6">t</tspan><tspan dy="-3.6"> </tspan> = <tspan data-v="a">(0.64, −0.21)</tspan></text></g><g class="fg-block" data-b="4"><rect x="0" y="200" width="150" height="44" rx="2"/><text class="fg-bt" x="75" y="218">Arduino</text><text class="fg-bs" x="75" y="234"><tspan data-v="cmd">Move,−19,6</tspan></text></g><g class="fg-block" data-b="5"><rect x="0" y="112" width="150" height="44" rx="2"/><text class="fg-bt" x="75" y="130">Labyrinth</text><text class="fg-bs" x="75" y="146">two steppers, ±30°</text></g><circle class="fg-token" r="3.5" cx="0" cy="0"/></svg>
+            <p class="fg-cap">(a) One control step, slowed down; on the rig it runs every 1/45 s, and the observation <em>o</em> is the ball and marker positions and speeds plus the next two waypoints. (b) The board from above, with the reward: progress <em>ρ</em> is the distance <em>s</em> along the route to the ball over its length <em>S</em>. A ball lost down a hole ends the episode and the re-loader returns it to the start.</p>
+          </div>
+          <div class="fg-b-wrap">
+            <p class="fg-panel-h">(b) Reward from progress along the route</p>
+            <svg class="fg fg-b" viewBox="0 0 296 233" role="img" aria-labelledby="mz-bt" data-hole="164,182.5" data-fall="0.127">
+            <title id="mz-bt">(b) The labyrinth from above, traced from the rig: holes, wooden walls and the printed route from start to finish. The ball position p is projected onto the nearest point q of the route; progress rho is the distance along the route to q as a fraction of its length, and the reward is 100 times the change in progress. When the ball drops into a hole the episode ends.</title>
+            <g transform="translate(-28.5 -22.8) scale(0.5)">
+              <rect class="fg-field" x="59" y="47.5" width="587" height="462.5"/>
+              <g class="fg-holes"><circle cx="110" cy="107.5" r="11.5"/><circle cx="164" cy="182.5" r="11.5"/><circle cx="215" cy="177.5" r="11.5"/><circle cx="276.5" cy="181" r="11.5"/><circle cx="442.5" cy="171" r="11.5"/><circle cx="609" cy="122.5" r="11.5"/><circle cx="555" cy="197.5" r="11.5"/><circle cx="277.5" cy="260" r="11.5"/><circle cx="341.5" cy="271.5" r="11.5"/><circle cx="395" cy="287.5" r="11.5"/><circle cx="505" cy="263.5" r="11.5"/><circle cx="555" cy="330" r="11.5"/><circle cx="224" cy="343.5" r="11.5"/><circle cx="110" cy="372.5" r="11.5"/><circle cx="281" cy="385" r="11.5"/><circle cx="224" cy="412.5" r="11.5"/><circle cx="448.5" cy="374" r="11.5"/><circle cx="606" cy="387.5" r="11.5"/><circle cx="495" cy="442.5" r="11.5"/><circle cx="558.5" cy="434" r="11.5"/><circle cx="282.5" cy="470" r="11.5"/><circle cx="345" cy="470" r="11.5"/><circle cx="400" cy="470" r="11.5"/><circle cx="497.5" cy="111" r="11.5"/></g>
+              <polyline class="fg-route" points="421,106 408.1,105.7 395.2,105.4 382.3,105.1 369.4,104.6 356.5,104.1 343.6,103.6 330.7,103.4 317.8,103.5 304.9,103.1 292.1,103.6 280.4,108.6 275.6,120.4 270.7,132.3 259.9,138.1 247,138.6 234.2,137.9 223.4,131.3 219.8,119.1 215.4,107 205.2,99.6 192.5,97.8 179.6,97.5 166.8,98.7 155.5,104.3 152.4,116.6 151.1,129.5 148.3,142.1 138.8,149.9 126.4,153.6 114,157.2 105.3,166.3 101.8,178.7 101.1,191.5 102.4,204.4 107.3,216.2 117.8,223.1 130.5,225.6 143.1,228.3 154.8,233.6 163.1,243.1 165.4,255.7 161.3,267.7 150.6,274.4 137.8,275.9 125,277.4 113.6,283 105.8,293.1 103.7,305.8 105.4,318.5 114.1,327.5 126.4,331.1 139.3,331.3 152.2,331.4 164.2,335.4 171.7,345.7 174.3,358.3 175.1,371.2 174.7,384 172.7,396.8 165.9,407.5 154.4,412.9 141.7,415.1 129,417.5 117.8,423.6 111,434.3 111.8,447 117.6,458.4 127.8,466.1 140.4,468.8 153.2,469.9 166.1,470.3 179,470.2 191.9,469.8 204.8,469 217.6,467.8 230.2,465 241.8,459.5 252.6,452.4 262.5,444.2 272.4,435.8 283.6,429.5 296,426 308.6,423.4 320.9,419.6 332.5,414.1 341.4,405 344.1,392.4 345,379.6 345.9,366.7 346,353.8 344.2,341 340.6,328.7 333.2,318.3 321.6,312.9 308.8,311.2 295.9,311.1 283,311.5 270.1,311.9 257.2,312 244.3,311.4 232,307.8 223.5,298.6 220.7,286.1 219.8,273.2 219.8,260.3 220.6,247.4 222.6,234.7 227.4,222.9 238.9,217.7 251.8,217.1 264.7,217.4 277.6,218.2 290.5,219 303.4,219.5 316.2,218.9 327.6,213.6 332.5,201.8 334.2,189 337,176.5 344.2,166.1 356.2,161.9 369.1,162.1 381.4,165.8 390.8,174.4 395.6,186.2 396.1,199.1 396.8,212 402.5,223.2 413.3,230.1 425.6,233.8 438.4,235 448.5,242.7 452.9,254.7 454.3,267.5 454.1,280.4 450.7,292.7 440.8,300.7 428.3,303.4 415.5,304.9 403.2,308.6 396.4,319.2 393.9,331.8 392.6,344.6 392,357.5 392,370.4 392.5,383.3 394.2,396.1 398.5,408.2 407.7,416.9 420.1,420.2 432.8,422.7 443.5,429.5 449.9,440.6 455.8,452.1 462.5,463.1 470.8,472.9 482.5,478.1 495.2,480.4 508,482 520.9,483.1 533.7,483.9 546.6,484.4 559.5,484.5 572.4,484.1 585.2,482.6 597.7,479.5 609.3,473.9 617.8,464.4 620.9,452 619.7,439.2 612.2,428.9 602.5,420.3 592.7,412 582.3,404.4 571.1,398.1 559.1,393.3 546.9,389 534.8,384.6 523.3,378.9 513.2,371 508.3,359.2 506.5,346.4 506.6,333.5 509.6,321 516.2,310 526.4,302.4 538.5,297.9 547.1,288.6 552.3,276.8 555.2,264.3 554.9,251.4 548.4,240.7 537.3,234.2 526.8,226.6 517.1,218.2 509.9,207.6 506.4,195.2 506.3,182.3 511.1,170.5 519.4,160.6 529.5,152.6 540.9,146.8 553.3,143.3 566.1,141.7 579,141.4 591.8,142.9 603.6,147.9 610.8,158.3 612.8,171.1 613.7,183.9 614,196.8 614.1,209.7 614.1,222.6 614,235.5 613.8,248.4 613.5,261.3 613.2,274.2 612.9,287.1 612.5,300"/>
+              <path class="fg-arrowhead" d="M612.3 309 L605.6 296.8 L619.6 297.2 Z"/>
+              <polyline class="fg-done" id="mz-done" points="421,106 408.1,105.7 395.2,105.4 382.3,105.1 369.4,104.6 356.5,104.1 343.6,103.6 330.7,103.4 317.8,103.5 304.9,103.1 292.1,103.6 280.4,108.6 275.6,120.4 270.7,132.3 269.6,132.9"/>
+              <g class="fg-walls"><rect x="60" y="106" width="40" height="19" rx="2"/><rect x="237.5" y="58.5" width="15" height="39" rx="2"/><rect x="176" y="110" width="16.5" height="40" rx="2"/><rect x="123" y="160" width="13" height="37.5" rx="2"/><rect x="238.5" y="150" width="19" height="36" rx="2"/><rect x="298.5" y="116" width="12.5" height="49" rx="2"/><rect x="312.5" y="122.5" width="155" height="13.5" rx="2"/><rect x="362.5" y="176" width="12.5" height="51.5" rx="2"/><rect x="176" y="220" width="14" height="91" rx="2"/><rect x="66" y="243.5" width="56.5" height="15" rx="2"/><rect x="240" y="238.5" width="17.5" height="37.5" rx="2"/><rect x="300" y="240" width="17.5" height="37.5" rx="2"/><rect x="468" y="75" width="13.5" height="235" rx="2"/><rect x="481" y="128.5" width="35" height="17.5" rx="2"/><rect x="416" y="178.5" width="12.5" height="34" rx="2"/><rect x="547.5" y="212.5" width="32.5" height="17.5" rx="2"/><rect x="580" y="193.5" width="12.5" height="152.5" rx="2"/><rect x="416" y="251" width="14" height="49" rx="2"/><rect x="482.5" y="280" width="35" height="15" rx="2"/><rect x="126" y="299" width="50" height="12" rx="2"/><rect x="125" y="346" width="12.5" height="62.5" rx="2"/><rect x="180" y="348.5" width="14" height="62.5" rx="2"/><rect x="242.5" y="332.5" width="17.5" height="65" rx="2"/><rect x="305" y="335" width="16" height="61" rx="2"/><rect x="361" y="286" width="14" height="156.5" rx="2"/><rect x="130" y="446" width="50" height="14" rx="2"/><rect x="246" y="480" width="12.5" height="30" rx="2"/><rect x="307.5" y="455" width="13.5" height="55" rx="2"/><rect x="413.5" y="341" width="12.5" height="62.5" rx="2"/><rect x="470" y="352.5" width="15" height="63.5" rx="2"/><rect x="526" y="402.5" width="12.5" height="62.5" rx="2"/><rect x="540" y="453.5" width="47.5" height="11.5" rx="2"/><rect x="562.5" y="351" width="83.5" height="10" rx="2"/><rect x="415" y="455" width="12.5" height="55" rx="2"/></g>
+              <text class="fg-lab" x="352" y="98">start</text>
+              <text class="fg-lab" transform="translate(624 238) rotate(90)">finish</text>
+              <g id="mz-marker" transform="translate(372 270)"><rect class="fg-qr" x="-9" y="-9" width="18" height="18"/><rect class="fg-qri" x="-5" y="-5" width="6" height="6"/></g>
+              <line class="fg-proj" id="mz-proj" x1="267.2" y1="128.5" x2="269.6" y2="132.9"/>
+              <rect class="fg-q" id="mz-q" x="265.6" y="128.9" width="8" height="8"/>
+              <circle class="fg-ball" id="mz-ball" cx="267.2" cy="128.5" r="7.5"/>
+            </g>
+            </svg>
+            <div class="fg-key">
+              <p class="fg-eq"><i>ρ</i><sub>t</sub> = <i>s</i>(<i>q</i><sub>t</sub>) / <i>S</i> <span class="fg-eqv">= <span id="mz-rho">0.06</span></span></p>
+              <p class="fg-eq"><i>r</i><sub>t</sub> = 100 (<i>ρ</i><sub>t</sub> − <i>ρ</i><sub>t−1</sub>) <span class="fg-eqv">= <span id="mz-r2">+3.2</span></span></p>
+            </div>
+          </div>
+        </div>
       </figure>
       <figure>
         <img src="/assets/img/marble-maze.webp" alt="The wooden marble labyrinth on a desk with stepper motors mounted on its two control knobs, a bench power supply and an Arduino beside it." width="1200" height="900" loading="lazy" decoding="async">
@@ -115,9 +138,8 @@
   </article>
 </section>
 
-<section id="cv" class="g">
+<section id="cv" class="g" aria-label="CV">
   <div class="scene">
-    <h2>Where I have studied and worked</h2>
     <canvas id="downwash" aria-hidden="true"></canvas>
   </div>
   <div class="ledgers">
@@ -141,18 +163,225 @@
 
 <section id="projects" class="g">
   <h2>Fun side projects</h2>
+  <!-- Each project is a <details> box: the summary is the closed preview (1 or 2 stills, title, one line),
+       .full is the rest. With JavaScript, clicking a box shows .full in the #sheet pop-up below; without it,
+       the box opens in place. To add a project, copy a block and give it a new id. -->
   <div class="side">
-    <article class="card">
-      <figure class="frame">
-        <video poster="/assets/img/arm-poster.jpg" playsinline muted loop preload="none" width="608" height="1080" controls>
-          <source src="/assets/video/robotic-arm.mp4" type="video/mp4">
-        </video>
-        <figcaption>The arm running through a motion sequence. <button type="button" class="vbtn" hidden>Pause video</button></figcaption>
-      </figure>
-      <h3>Robotic arm</h3>
-      <p class="spec">2024. Four degrees of freedom, inverse kinematics, CAD and 3D printing.</p>
-      <p>A four-degree-of-freedom servo arm, designed in CAD and 3D-printed, with inverse kinematics.</p>
-    </article>
+
+    <details class="card" name="side" id="arm">
+      <summary>
+        <span class="peek"><img src="/assets/img/arm-poster.webp" style="object-position:50% 40%" alt="" width="608" height="1080" loading="lazy" decoding="async"></span>
+        <h3>Robotic arm</h3>
+        <span class="short">A four-degree-of-freedom servo arm with inverse kinematics.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>A four-degree-of-freedom servo arm, designed in CAD and 3D-printed. Inverse kinematics turns a target position into the four joint angles.</p>
+        </div>
+        <div class="gallery">
+          <figure>
+            <video poster="/assets/img/arm-poster.webp" playsinline muted loop preload="none" width="608" height="1080" controls>
+              <source src="/assets/video/robotic-arm.mp4" type="video/mp4">
+            </video>
+          </figure>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="roulette">
+      <summary>
+        <span class="peek"><img src="/assets/img/roulette.webp" alt="" width="1374" height="1600" loading="lazy" decoding="async"></span>
+        <h3>3D-printed roulette wheel</h3>
+        <span class="short">A 3D-printed roulette wheel I designed, made and sold on eBay and Etsy.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>A 25 cm roulette wheel I designed in CAD and 3D-printed.</p>
+          <p>I sold a few on <a href="https://www.ebay.co.uk/itm/318917335504">eBay</a> and Etsy, and the model is on <a href="https://makerworld.com/en/models/3369837-roulette-wheel-25cm#profileId-3832638">MakerWorld</a> if you want to print your own.</p>
+        </div>
+        <div class="gallery split">
+          <figure>
+            <video poster="/assets/img/roulette-spin-poster.webp" playsinline muted loop preload="none" width="540" height="960" controls>
+              <source src="/assets/video/roulette-spin.mp4" type="video/mp4">
+            </video>
+          </figure>
+          <figure>
+            <img src="/assets/img/roulette-ebay.webp" alt="The eBay listing: 3D printed PLA Roulette Wheel 25cm diameter, 75 pounds or best offer, 8 available, 2 sold." width="1605" height="668" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/roulette-ebay-sales.webp" alt="The eBay selling overview: 2 orders, 118.84 pounds year to date, with the roulette wheel orders paid, dispatched and delivered." width="1225" height="930" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="airboat">
+      <summary>
+        <span class="peek"><img src="/assets/img/airboat-water.webp" alt="" width="678" height="491" loading="lazy" decoding="async"></span>
+        <h3>Twin-propeller air boat</h3>
+        <span class="short">A catamaran pushed by two air propellers.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>After taking apart the drone gantry, I used its parts to build a remote-controlled catamaran. I tested it on the River Cam.</p>
+        </div>
+        <div class="gallery split">
+          <figure>
+            <video poster="/assets/img/airboat-river-poster.webp" playsinline muted loop preload="none" width="540" height="960" controls>
+              <source src="/assets/video/airboat-river.mp4" type="video/mp4">
+            </video>
+          </figure>
+          <figure>
+            <img src="/assets/img/airboat.webp" alt="A white twin-hull model boat on a carpet, with a black propeller on a printed mount above each hull and an electronics box with a voltage display between them." width="1600" height="900" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/airboat-cad.webp" alt="CAD model of the boat: two long capsule-shaped hulls, the electronics box and the two motor mounts, with A.D.DAVIES on the front hull." width="1696" height="957" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="four-mazes">
+      <summary>
+        <span class="peek"><img src="/assets/img/four-mazes-poster.webp" alt="" width="960" height="540" loading="lazy" decoding="async"></span>
+        <h3>Three-board labyrinth workshop</h3>
+        <span class="short">A robotics and machine learning workshop where teams programmed three labyrinth boards to race a marble to the finish.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>I was invited to run a workshop on robotics and machine learning at a summer school run by Li Peng. I turned the labyrinth into a game: each team programmed the moves for the boards, and the first team to get the marble to the end won a prize.</p>
+          <p>A Raspberry Pi hosted a website that the students connected to from their laptops. With three boards and a queue, every team could send an attempt, watch it run and change their code straight away.</p>
+        </div>
+        <div class="gallery split tall">
+          <figure>
+            <img src="/assets/img/workshop-teaching.webp" alt="Luca leaning over two students at a laptop, pointing at their code on the screen." width="1146" height="1600" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <video poster="/assets/img/three-mazes-workshop-poster.webp" playsinline muted loop preload="none" width="1024" height="576" controls>
+              <source src="/assets/video/three-mazes-workshop.mp4" type="video/mp4">
+            </video>
+          </figure>
+          <figure>
+            <video poster="/assets/img/four-mazes-poster.webp" playsinline muted loop preload="none" width="960" height="540" controls>
+              <source src="/assets/video/four-mazes.mp4" type="video/mp4">
+            </video>
+          </figure>
+        </div>
+      </div>
+    </details>
+    <details class="card" name="side" id="bike-fitting">
+      <summary>
+        <span class="peek"><img src="/assets/img/bike-fitting-peek.webp" alt="" width="960" height="720" loading="lazy" decoding="async"></span>
+        <h3>Bike fitting from video</h3>
+        <span class="short">Saddle-height advice from a short phone video of someone cycling.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>Professional bike fits are expensive, so with Kyle Fram and Fivos Papathanasiou I built a pipeline that takes a short video of someone cycling and says whether to raise or lower the saddle. It tracks the rider's joints and the bike, and a custom model estimates the bike's angle to the camera so the joint angles can be corrected for perspective.</p>
+          <p>To train that model we filmed riders with a Raspberry Pi and gyroscope on the bike recording its true angle. A 15 second clip takes about a minute to analyse, and you can try it with your own video at <a href="https://bikefitting.vercel.app/">bikefitting.vercel.app</a>.</p>
+        </div>
+        <div class="gallery">
+          <figure class="wide">
+            <video poster="/assets/img/bike-fitting-poster.webp" playsinline muted loop preload="none" width="1280" height="590" controls>
+              <source src="/assets/video/bike-fitting.mp4" type="video/mp4">
+            </video>
+          </figure>
+          <div class="trio">
+            <figure>
+              <img src="/assets/img/bike-fitting-collect-1.webp" alt="Setting up the Raspberry Pi and gyroscope on a bike by a red wall before a recording." width="739" height="739" loading="lazy" decoding="async">
+            </figure>
+            <figure>
+              <img src="/assets/img/bike-fitting-collect-2.webp" alt="Recording a rider wheeling a bike across a paved courtyard while a phone on a tripod films from the side." width="1200" height="900" loading="lazy" decoding="async">
+            </figure>
+            <figure>
+              <img src="/assets/img/bike-fitting-pi.webp" alt="The data-logging rig: a Raspberry Pi with a screen in a 3D-printed mount, connected by a ribbon cable to a small gyroscope sensor." width="1200" height="900" loading="lazy" decoding="async">
+            </figure>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="pill-dispenser">
+      <summary>
+        <span class="peek"><img src="/assets/img/pill-dispenser-poster.webp" style="object-position:50% 40%" alt="" width="540" height="960" loading="lazy" decoding="async"></span>
+        <h3>Pill dispenser and reminder</h3>
+        <span class="short">A wall-mounted dispenser that releases one pill a day and keeps a calendar of every dose taken.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>I kept forgetting to take my multivitamins and supplements, so I built a dispenser that stores the capsules and releases them one at a time.</p>
+          <p>An ESP32 drives the motors and tracks which days I took them. It also hosts a local website that shows my progress and sends a notification to my phone if it is getting late and I still have not taken them.</p>
+        </div>
+        <div class="gallery split">
+          <figure>
+            <video poster="/assets/img/pill-dispenser-poster.webp" playsinline muted loop preload="none" width="540" height="960" controls>
+              <source src="/assets/video/pill-dispenser.mp4" type="video/mp4">
+            </video>
+          </figure>
+          <figure>
+            <img src="/assets/img/pill-calendar.webp" alt="The pill calendar: a 10 day streak, 8 of 8 days taken in October, and a month grid with the taken days in green." width="1215" height="885" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="nutrition-site">
+      <summary>
+        <span class="peek"><img src="/assets/img/nutrition-site.webp" alt="" width="1748" height="1210" loading="lazy" decoding="async"></span>
+        <h3>Website for bookings</h3>
+        <span class="short">A website for Laura Bonesi Nutrition.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>My mum is a nutritionist and needed a better way to manage her bookings, so I built her a website. Clients book consultations themselves, the bookings sync to her Google and Apple calendars with email confirmations, and an admin area lets her manage bookings and clients and edit the site herself. It is in English and Italian.</p>
+        </div>
+        <div class="gallery">
+          <figure>
+            <img src="/assets/img/nutrition-site.webp" alt="The Laura Bonesi Nutrition home page: a short introduction beside a portrait, then a section on how consultations work." width="1748" height="1210" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/nutrition-services.webp" alt="The services page: a free 20-minute consultation, then consultation packages with prices and what each includes." width="1473" height="1203" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </details>
+
+    <details class="card" name="side" id="robotics">
+      <summary>
+        <span class="peek"><img src="/assets/img/ftc-inspire.webp" alt="" width="1600" height="1200" loading="lazy" decoding="async"></span>
+        <h3>FIRST Tech Challenge robotics</h3>
+        <span class="short">Captain of my school's competition robotics team, from the UK Inspire Award to the World Championship in Detroit.</span>
+        <span class="more" aria-hidden="true"></span>
+      </summary>
+      <div class="full">
+        <div class="text">
+          <p>I captained the St Chris Snowflakes, St Christopher School's FIRST Tech Challenge team. Each season the team designs, builds and programs a robot for that year's game, and competes against other schools' robots.</p>
+          <p>In the 2018–19 season we won the UK national competition, which took us to the World Championship in Detroit, where we won the Judges' Award.</p>
+        </div>
+        <div class="gallery">
+          <figure>
+            <img src="/assets/img/ftc-robot.webp" alt="The team's robot on the competition field at the World Championship, with the pink snowflake team panel on its front." width="911" height="1600" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/ftc-trophy.webp" alt="The 2018 to 2019 World Championship Judges' Award trophy." width="951" height="1600" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/ftc-worlds.webp" alt="The team in pink hoodies at the edge of the field at the World Championship in Detroit, with the robot and driver tablets." width="1600" height="1200" loading="lazy" decoding="async">
+          </figure>
+          <figure>
+            <img src="/assets/img/ftc-inspire.webp" alt="The St Chris Snowflakes on stage under a screen reading Inspire Award, St Chris Snowflakes UK-002, holding up the trophy and a FIRST Tech Challenge banner." width="1600" height="1200" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </details>
+
   </div>
 </section>
 
@@ -166,5 +395,18 @@
 </section>
 
 </main>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-in" id="sheet-in">
+    <div class="sheet-head">
+      <div>
+        <h3 id="sheet-title"></h3>
+        <p class="spec" id="sheet-spec"></p>
+      </div>
+      <button type="button" class="sheet-x" id="sheet-x">Close</button>
+    </div>
+    <div id="sheet-body"></div>
+  </div>
+</dialog>
 </body>
 </html>

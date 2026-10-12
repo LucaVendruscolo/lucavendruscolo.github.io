@@ -3,9 +3,11 @@
 // The air is an incompressible fluid on a staggered (MAC) grid: velocities live
 // on cell faces, advection is semi-Lagrangian with a MacCormack correction, and
 // a pressure projection makes the field divergence-free (after Stam). A padded
-// convex hull around the name and the lede is a solid, no-slip body, faired to a
-// blunt nose upstream so the flow stays attached over the text and lets go at the
-// square back, the way it does over a car. The shear layers it sheds roll up on
+// convex hull around the name and the lede is a solid body the air cannot pass
+// through. There is no viscosity, so the air slips along it, slowed only where the
+// grid's interpolation reaches into the body. It is faired to a blunt nose upstream
+// so the flow stays attached over the text and lets go at the square back, the way
+// it does over a car. The shear layers it sheds roll up on
 // their own, so every swirl in the picture is the body's doing. Nothing is injected but a faint
 // unsteadiness at the inlet, the way a wind tunnel is never perfectly clean.
 // The ink is streaklines released at the left edge, carried by the grid
@@ -45,8 +47,12 @@ function noise2(x, y) {
 }
 
 // ---- tunables ----
-const U0 = 115;                // px/s, free-stream speed
+const U0 = 90;                 // px/s, free-stream speed
 const CELLS = 17000;           // grid cells at most (the cell size follows from the canvas area)
+const CELLS_COARSE = 7000;     // the same on touch screens: a phone's body is small, and its CPU slow
+const CELLS_MAX = 30000;       // cells at most on a big screen, where the cell would otherwise stop at 14 px
+const AIR_HZ = [30, 20, 12];   // air steps per second, and once degraded once and twice; the smoke moves every frame
+const FRAME_HZ = 60;           // a faster screen draws on every 2nd, 3rd or 4th frame, so a 240 Hz one draws at 60
 const ITER = 11;               // pressure sweeps per step, warm-started from the last step;
                                // a tall narrow domain (a phone) needs more of them to settle
 const OMEGA = 1.75;            // over-relaxation
@@ -58,20 +64,24 @@ const NOSE_K = 0.5;            // the faired nose reaches this many body half-he
 const L_K = 0.5;               // near-body scale of the starting field, times the body half-height
 const D0 = 0.5;                // wake deficit of the starting field
 const LINE_GAP = 12;           // px between released filaments (26 on coarse pointers)
-const MARKERS = 30000;         // ink markers in total at most; past this the whole picture is drawn coarser
-const LIFE0 = 11, LIFE1 = 20;  // s, the smoke holds until LIFE0 and has dissipated by LIFE1
+const MARKERS = 30000;         // ink markers in total at most, per 1600 px of width; past this the whole picture is drawn coarser
+const LIFE0 = 11, LIFE1 = 20;  // s, the smoke holds until LIFE0 and has dissipated by LIFE1, on a screen up to
+const LIFE_W = 0.8;            // ...this many widths of travel; on a wider one it lasts until it has come that far
 const STALL_X = 3;             // smoke sitting in nearly still air ages at most this much faster
 const PTR_R = 80;              // px, radius of the pointer's push
-const PTR_K = 0.8;             // the air near the pointer is pulled toward this fraction of its speed
-const PTR_VMAX = 420;          // px/s, cap on the pointer speed the air follows
+const PTR_K = 0.45;            // the air near the pointer is pulled toward this fraction of its speed
+const PTR_VMAX = 280;          // px/s, cap on the pointer speed the air follows
 const PTR_TAU = 0.06;          // s, how quickly the air near the pointer follows it
 const ASSIST = 0.05;           // markers ahead of the body drift off the stagnation line at this fraction of U0
 const SPLIT = 1.6, MERGE = 0.5, SPLIT_FADE = 0.85;   // marker spacing bounds (times s) and thinning per split
 const KINK = 0.26, KINK_W = 0.55;   // a turn sharper than about 75 degrees is a fold in the line, not a curve in the flow
 const ALPHA = [0.06, 0.12, 0.19, 0.26, 0.33, 0.4];   // ink, darkest where the smoke is thickest
+const FLAT = 0.12;             // px, a curve piece this close to straight is drawn straight, and straight pieces
+const FLAT_RUN = 6;            // ...in a row are joined, over at most this many marker spacings: curves cost the GPU
 const WARM_DT = 0.1;           // s, step of the hidden warm-up
 const WARM_PAD = 4;            // s, warm-up beyond the time the air takes from the body's back to the right edge
 
+const RCP = new Float64Array([0, 1, 1 / 2, 1 / 3, 1 / 4]);   // 1 / n for the pressure sweep
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 function rgb(hex, fallback) {
   const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
@@ -111,20 +121,22 @@ export function createSmoke(opts) {
   // Staggered grid. Cells (i, j) with centres at ((i + 0.5)h, (j + 0.5)h).
   // u lives on vertical faces: (nx + 1) by ny, u[i, j] at (i h, (j + 0.5) h).
   // v lives on horizontal faces: nx by (ny + 1), v[i, j] at ((i + 0.5) h, j h).
-  let W = 0, H = 0, Hh = 0, CELL = 8, nx = 0, ny = 0, NU = 0, NV = 0, NC = 0, NK = 0, sw = 0, iters = ITER;
-  let u = null, uh, u2, v, vh, v2, P, dvg, sol, nnb, uf, vf;
+  let W = 0, H = 0, Hh = 0, CELL = 8, iC = 1 / 8, nx = 0, ny = 0, NU = 0, NV = 0, NC = 0, NK = 0, sw = 0, iters = ITER;
+  let u = null, uh, u2, v, vh, v2, P, dvg, sol, nnb, nbm, uf, vf;
+  let xu, xv;   // the cross velocity at each face (v at u faces, u at v faces), kept between advection passes
   // body: padded convex hull of the text boxes
   let has = false, PAD = 18, ne = 0;
   const EX = new Float64Array(32), EY = new Float64Array(32), EDX = new Float64Array(32), EDY = new Float64Array(32);
   const EL = new Float64Array(32), ENX = new Float64Array(32), ENY = new Float64Array(32);
   let xl = 0, xr = 0, yt = 0, yb = 0, yc = 0, hb = 1, L = 40, Lb = 0, bx0 = 0, bx1 = -1, by0 = 0, by1 = -1;
   // filaments
-  let lines = [], N = 0, s = 7, cap = 0, scap = 0, sx, sy, sd, sg, markers = 0;
+  let lines = [], N = 0, s = 7, cap = 0, scap = 0, sx, sy, sd, sg, segA, kS, kC, markers = 0;
+  let life0 = LIFE0, life1 = LIFE1, mmax = MARKERS;   // the smoke's life and the marker budget, for this width
   let simT = 0;
   const ptr = { x: 0, y: 0, vx: 0, vy: 0, t: -1e9, on: false };
   // loop
-  let raf = 0, last = 0, held = false, hidden = false, visible = true, warmed = false, gen = 0;
-  let stepMs = 0, fluidMs = 0, slowN = 0, degraded = 0, frameN = 0, acc = 0;
+  let raf = 0, last = 0, rafT = 0, iv = 1000 / 60, skip = 0, held = false, hidden = false, visible = true, warmed = false, gen = 0;
+  let stepMs = 0, fluidMs = 0, slowN = 0, degraded = 0, acc = 0;
   let lastW = 0, lastH = 0, resizeT = 0, io = null;
   const out = { x: 0, y: 0 };
 
@@ -189,14 +201,14 @@ export function createSmoke(opts) {
 
   // ---- interpolation ----
   function sampleU(A, x, y) {
-    let fx = x / CELL, fy = y / CELL - 0.5;
+    let fx = x * iC, fy = y * iC - 0.5;
     if (fx < 0) fx = 0; else if (fx > nx - 0.001) fx = nx - 0.001;
     if (fy < 0) fy = 0; else if (fy > ny - 1.001) fy = ny - 1.001;
     const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, k = j * sw + i;
     return (A[k] * (1 - tx) + A[k + 1] * tx) * (1 - ty) + (A[k + sw] * (1 - tx) + A[k + sw + 1] * tx) * ty;
   }
   function sampleV(A, x, y) {
-    let fx = x / CELL - 0.5, fy = y / CELL;
+    let fx = x * iC - 0.5, fy = y * iC;
     if (fx < 0) fx = 0; else if (fx > nx - 1.001) fx = nx - 1.001;
     if (fy < 0) fy = 0; else if (fy > ny - 0.001) fy = ny - 0.001;
     const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, k = j * nx + i;
@@ -229,7 +241,10 @@ export function createSmoke(opts) {
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
         const c = j * nx + i;
-        nnb[c] = sol[c] ? 0 : uf[j * sw + i] + uf[j * sw + i + 1] + vf[c] + vf[c + nx];
+        const k = j * sw + i;
+        nnb[c] = sol[c] ? 0 : uf[k] + uf[k + 1] + vf[c] + vf[c + nx];
+        // the neighbours the sweep reads: left, right, below, above (the outlet's p = 0 adds nothing)
+        nbm[c] = sol[c] ? 0 : uf[k] | (uf[k + 1] && i + 1 < nx ? 2 : 0) | (vf[c] ? 4 : 0) | (vf[c + nx] ? 8 : 0);
       }
     }
     for (let k = 0; k < NC; k++) if (sol[k]) P[k] = 0;
@@ -288,8 +303,9 @@ export function createSmoke(opts) {
       for (let i = 0; i <= nx; i++) {
         const k = j * sw + i;
         if (!uf[k]) { uh[k] = u[k]; continue; }
-        const x = i * CELL;
-        uh[k] = sampleU(u, x - dt * u[k], y - dt * sampleV(v, x, y));
+        const x = i * CELL, vy = sampleV(v, x, y);
+        xu[k] = vy;
+        uh[k] = sampleU(u, x - dt * u[k], y - dt * vy);
       }
     }
     for (let j = 0; j <= ny; j++) {
@@ -297,8 +313,9 @@ export function createSmoke(opts) {
       for (let i = 0; i < nx; i++) {
         const k = j * nx + i;
         if (!vf[k]) { vh[k] = v[k]; continue; }
-        const x = (i + 0.5) * CELL;
-        vh[k] = sampleV(v, x - dt * sampleU(u, x, y), y - dt * v[k]);
+        const x = (i + 0.5) * CELL, vx = sampleU(u, x, y);
+        xv[k] = vx;
+        vh[k] = sampleV(v, x - dt * vx, y - dt * v[k]);
       }
     }
     for (let j = 0; j < ny; j++) {
@@ -306,7 +323,7 @@ export function createSmoke(opts) {
       for (let i = 0; i <= nx; i++) {
         const k = j * sw + i;
         if (!uf[k]) { u2[k] = u[k]; continue; }
-        const x = i * CELL, vx = u[k], vy = sampleV(v, x, y);
+        const x = i * CELL, vx = u[k], vy = xu[k];
         const back = sampleU(uh, x + dt * vx, y + dt * vy);
         let n = uh[k] + 0.5 * (u[k] - back);
         let fx = (x - dt * vx) / CELL, fy = (y - dt * vy) / CELL - 0.5;
@@ -323,7 +340,7 @@ export function createSmoke(opts) {
       for (let i = 0; i < nx; i++) {
         const k = j * nx + i;
         if (!vf[k]) { v2[k] = v[k]; continue; }
-        const x = (i + 0.5) * CELL, vy = v[k], vx = sampleU(u, x, y);
+        const x = (i + 0.5) * CELL, vy = v[k], vx = xv[k];
         const back = sampleV(vh, x + dt * vx, y + dt * vy);
         let n = vh[k] + 0.5 * (v[k] - back);
         let fx = (x - dt * vx) / CELL - 0.5, fy = (y - dt * vy) / CELL;
@@ -338,26 +355,26 @@ export function createSmoke(opts) {
     let t = u; u = u2; u2 = t; t = v; v = v2; v2 = t;
   }
   function project() {
-    const h2 = CELL * CELL;
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
         const c = j * nx + i, k = j * sw + i;
-        dvg[c] = sol[c] ? 0 : (u[k + 1] - u[k] + v[c + nx] - v[c]) / CELL;
+        dvg[c] = sol[c] ? 0 : (u[k + 1] - u[k] + v[c + nx] - v[c]) * CELL;   // the divergence times h^2
       }
     }
     for (let it = 0; it < iters; it++) {
       for (let j = 0; j < ny; j++) {
         for (let i = 0; i < nx; i++) {
           const c = j * nx + i;
+          const m = nbm[c];
+          if (m === 15) { P[c] += OMEGA * ((P[c - 1] + P[c + 1] + P[c - nx] + P[c + nx] - dvg[c]) * 0.25 - P[c]); continue; }
           const n = nnb[c];
           if (!n) continue;
-          const k = j * sw + i;
           let sum = 0;
-          if (uf[k]) sum += P[c - 1];
-          if (uf[k + 1]) sum += i + 1 < nx ? P[c + 1] : 0;   // the outlet holds p = 0
-          if (vf[c]) sum += P[c - nx];
-          if (vf[c + nx]) sum += P[c + nx];
-          P[c] += OMEGA * ((sum - h2 * dvg[c]) / n - P[c]);
+          if (m & 1) sum += P[c - 1];
+          if (m & 2) sum += P[c + 1];
+          if (m & 4) sum += P[c - nx];
+          if (m & 8) sum += P[c + nx];
+          P[c] += OMEGA * ((sum - dvg[c]) * RCP[n] - P[c]);
         }
       }
     }
@@ -436,10 +453,10 @@ export function createSmoke(opts) {
     while (m < cap - 8 && x <= W + 8 && y > -CELL && y < H + CELL) {
       tx.push(x); ty.push(y); m++;
       velAt(x, y);
-      let sp = Math.hypot(out.x, out.y);
+      let sp = Math.sqrt(out.x * out.x + out.y * out.y);
       if (sp < 0.01 * U0) break;
       velAt(x + 0.5 * s * out.x / sp, y + 0.5 * s * out.y / sp);
-      sp = Math.hypot(out.x, out.y);
+      sp = Math.sqrt(out.x * out.x + out.y * out.y);
       if (sp < 0.01 * U0) break;
       x += s * out.x / sp; y += s * out.y / sp;
       if (has && x > bx0 && x < bx1 && y > by0 && y < by1) { const d = sdf(x, y); if (d < CELL) { grad(x, y); x += (CELL - d) * out.x; y += (CELL - d) * out.y; } }
@@ -468,7 +485,7 @@ export function createSmoke(opts) {
       velAt(x, y);
       const kx = out.x, ky = out.y;
       velAt(x + 0.5 * dt * kx, y + 0.5 * dt * ky);
-      const sp = Math.hypot(out.x, out.y);
+      const sp = Math.sqrt(out.x * out.x + out.y * out.y);
       x += dt * out.x; y += dt * out.y;
       if (has) {
         if (x > fz0 && x < fz1) { const w = (x - fz0) * fzw; y += (y < yc ? -1 : 1) * ASSIST * U0 * w * w * dt; }
@@ -482,31 +499,49 @@ export function createSmoke(opts) {
       G[i] += dt * (sp < slow ? 1 + STALL_X * (1 - sp / slow) : 1);
     }
   }
-  // A streakline that doubles back on itself draws a tooth a marker or two wide, which
-  // reads as a zig-zag rather than as smoke. Ease those out, and leave real curvature
-  // (even a tight spiral turns gently from one marker to the next) untouched.
+  // A streakline that doubles back on itself and then carries on draws a tooth a marker or
+  // two wide (a Z: sharp turns one way and then straight back), which reads as a zig-zag
+  // rather than as smoke. Ease those out. A fold is a U, both turns the same way: the air
+  // has folded the smoke there, and its tip is left alone, as is any real curvature.
   function deKink(f) {
     const X = f.x, Y = f.y, n = f.n;
     if (n < 5) return;
+    // the sharp turns, by direction (+1, -1, or 0 when gentle), from the markers as they are now
+    for (let i = 1; i < n - 1; i++) {
+      const ux = X[i] - X[i - 1], uy = Y[i] - Y[i - 1], wx = X[i + 1] - X[i], wy = Y[i + 1] - Y[i];
+      const l2 = (ux * ux + uy * uy) * (wx * wx + wy * wy);
+      let k = 0, c = 1;
+      if (l2 > 1e-16) {
+        c = (ux * wx + uy * wy) / Math.sqrt(l2);
+        if (c < KINK) k = ux * wy - uy * wx < 0 ? -1 : 1;
+      }
+      kS[i] = k; kC[i] = c;
+    }
+    kS[0] = 0; kS[n - 1] = 0;
     let ox = X[0], oy = Y[0];
     for (let i = 1; i < n - 1; i++) {
-      const bx = X[i], by = Y[i], cx = X[i + 1], cy = Y[i + 1];
-      const ux = bx - ox, uy = by - oy, wx = cx - bx, wy = cy - by;
-      const lu = Math.sqrt(ux * ux + uy * uy), lw = Math.sqrt(wx * wx + wy * wy);
-      let px = bx, py = by;
-      if (lu > 1e-4 && lw > 1e-4) {
-        const c = (ux * wx + uy * wy) / (lu * lw);
-        if (c < KINK) {
-          const k = KINK_W * Math.min(1, (KINK - c) / (KINK + 1));
-          px = bx + k * (0.5 * (ox + cx) - bx);
-          py = by + k * (0.5 * (oy + cy) - by);
-        }
+      const bx = X[i], by = Y[i], k = kS[i];
+      if (k !== 0 && (kS[i - 1] === -k || kS[i + 1] === -k)) {
+        const c = kC[i], e = KINK_W * Math.min(1, (KINK - c) / (KINK + 1));
+        X[i] = bx + e * (0.5 * (ox + X[i + 1]) - bx);
+        Y[i] = by + e * (0.5 * (oy + Y[i + 1]) - by);
       }
       ox = bx; oy = by;
-      X[i] = px; Y[i] = py;
     }
   }
 
+  // the point a fraction q of the way from p1 to p2 on the centripetal Catmull-Rom curve through p0..p3
+  // (centripetal: it neither loops nor overshoots where the spacing is uneven), into out
+  function spline(x0, y0, x1, y1, x2, y2, x3, y3, q) {
+    const t1 = Math.sqrt(Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)) || 1e-3, t2 = t1 + (Math.sqrt(Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)) || 1e-3);
+    const t3 = t2 + (Math.sqrt(Math.sqrt((x3 - x2) ** 2 + (y3 - y2) ** 2)) || 1e-3), t = t1 + q * (t2 - t1);
+    const a1x = ((t1 - t) * x0 + t * x1) / t1, a1y = ((t1 - t) * y0 + t * y1) / t1;
+    const a2x = ((t2 - t) * x1 + (t - t1) * x2) / (t2 - t1), a2y = ((t2 - t) * y1 + (t - t1) * y2) / (t2 - t1);
+    const a3x = ((t3 - t) * x2 + (t - t2) * x3) / (t3 - t2), a3y = ((t3 - t) * y2 + (t - t2) * y3) / (t3 - t2);
+    const b1x = ((t2 - t) * a1x + t * a2x) / t2, b1y = ((t2 - t) * a1y + t * a2y) / t2;
+    const b2x = ((t3 - t) * a2x + (t - t1) * a3x) / (t3 - t1), b2y = ((t3 - t) * a2y + (t - t1) * a3y) / (t3 - t1);
+    out.x = ((t2 - t) * b1x + (t - t1) * b2x) / (t2 - t1); out.y = ((t2 - t) * b1y + (t - t1) * b2y) / (t2 - t1);
+  }
   // keep markers about s apart: release new ones between the last free marker and the
   // release point, subdivide stretched segments (the ink thins), drop crowded ones and
   // trim the oldest once they have faded or left
@@ -529,8 +564,11 @@ export function createSmoke(opts) {
             sx[o] = px + dx * q; sy[o] = py + dy * q; sd[o] = 1; sg[o] = gg + (1 - q) * l / U0; o++;
           }
         } else {
-          const k = Math.min(3, Math.floor(l / sf), scap - 4 - o), dm = 0.5 * (sd[o - 1] + dd) * SPLIT_FADE, gm = 0.5 * (sg[o - 1] + gg);
-          for (let j = 1; j <= k; j++) { const q = j / (k + 1); sx[o] = px + dx * q; sy[o] = py + dy * q; sd[o] = dm; sg[o] = gm; o++; }
+          // the new markers go on a curve through the neighbours, not on the chord, so a filament that is
+          // being stretched stays a curve rather than becoming a chain of straight pieces
+          const k = Math.min(8, Math.floor(l / sf), scap - 4 - o), dm = 0.5 * (sd[o - 1] + dd) * SPLIT_FADE, gm = 0.5 * (sg[o - 1] + gg);
+          const ax = o > 1 ? sx[o - 2] : px, ay = o > 1 ? sy[o - 2] : py, bx = X[i + 1], by = Y[i + 1];
+          for (let j = 1; j <= k; j++) { spline(ax, ay, px, py, x, y, bx, by, j / (k + 1)); sx[o] = out.x; sy[o] = out.y; sd[o] = dm; sg[o] = gm; o++; }
         }
       }
       if (o >= scap - 2) break;
@@ -538,7 +576,7 @@ export function createSmoke(opts) {
       px = x; py = y;
     }
     let j0 = 0;
-    while (j0 < o - 2 && (sg[j0] > LIFE1 || sx[j0] > W + 12)) j0++;
+    while (j0 < o - 2 && (sg[j0] > life1 || sx[j0] > W + 12)) j0++;
     if (o - j0 > cap - 8) j0 = o - (cap - 8);
     const nn = o - j0;
     for (let i = 0; i < nn; i++) { X[i] = sx[i + j0]; Y[i] = sy[i + j0]; D[i] = sd[i + j0]; G[i] = sg[i + j0]; }
@@ -547,7 +585,7 @@ export function createSmoke(opts) {
   function moveLines(dt) {
     // when the wake has folded the smoke into more ink than the budget allows, every
     // filament is carried at a coarser spacing rather than being eaten from the tail
-    const gk = clamp(markers / MARKERS, 1, 3.5);
+    const gk = clamp(markers / mmax, 1, 3.5);
     let m = 0;
     for (const f of lines) {
       f.s = s * clamp(Math.max(gk, f.n / (0.7 * cap)), 1, 3.5);
@@ -557,33 +595,72 @@ export function createSmoke(opts) {
   }
 
   // ---- render ----
+  // Each filament is drawn as one smooth curve through its markers: around every marker a quadratic piece
+  // runs from the middle of the segment before it to the middle of the segment after, with the marker as
+  // its control point, so a stretched filament bends instead of showing its joints. Pieces are grouped by
+  // ink level; a segment that is too faint, too long or out of the picture breaks the curve, and the piece
+  // next to the break runs straight to the marker. Most of a filament is nearly straight, so a piece that
+  // is within FLAT of its chord is drawn as the chord, and chords in line are joined into one: only the
+  // bends cost a curve. (Everything is drawn, on screen or not: the compositor scrolls the canvas before
+  // the next frame can redraw it.)
   function draw(opaque) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (opaque) { ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H); } else ctx.clearRect(0, 0, W, H);
     const NA = ALPHA.length, fadeH = Math.max(1, H - Hh);
-    const iL = 1 / (LIFE1 - LIFE0);
+    const iL = 1 / (life1 - life0);
     const paths = [];
     for (let i = 0; i < NA; i++) paths.push(new Path2D());
     for (const f of lines) {
       const X = f.x, Y = f.y, D = f.d, G = f.g, n = f.n, lmax2 = 9 * f.s * f.s;
-      let cur = -1;
+      // the ink on each segment, or -1 where it is not drawn
       for (let i = 1; i < n; i++) {
-        const x0 = X[i - 1], y0 = Y[i - 1], x1 = X[i], y1 = Y[i], dx = x1 - x0, dy = y1 - y0;
-        if (dx * dx + dy * dy > lmax2) { cur = -1; continue; }
-        const g = 0.5 * (G[i - 1] + G[i]);
-        let fg = g <= LIFE0 ? 1 : 1 - (g - LIFE0) * iL;
-        if (fg <= 0.02) { cur = -1; continue; }
-        if (fg < 1) fg = fg * fg * (3 - 2 * fg);
-        const ym = 0.5 * (y0 + y1);
-        const fy = ym <= Hh ? 1 : 1 - (ym - Hh) / fadeH;
-        if (fy < 0.08) { cur = -1; continue; }
-        const d = 0.5 * (D[i - 1] + D[i]);
-        const a = (0.3 + 0.7 * d) * fg * fy;
-        if (a < 0.05) { cur = -1; continue; }
-        const b = Math.min(NA - 1, Math.floor(a * NA));
-        if (b !== cur) { paths[b].moveTo(x0, y0); cur = b; }
-        paths[b].lineTo(x1, y1);
+        const x0 = X[i - 1], y0 = Y[i - 1], dx = X[i] - x0, dy = Y[i] - y0;
+        let a = -1;
+        if (dx * dx + dy * dy <= lmax2) {
+          const g = 0.5 * (G[i - 1] + G[i]);
+          let fg = g <= life0 ? 1 : 1 - (g - life0) * iL;
+          if (fg > 0.02) {
+            if (fg < 1) fg = fg * fg * (3 - 2 * fg);
+            const ym = y0 + 0.5 * dy;
+            const fy = ym <= Hh ? 1 : 1 - (ym - Hh) / fadeH;
+            if (fy >= 0.08) {
+              const v = (0.3 + 0.7 * 0.5 * (D[i - 1] + D[i])) * fg * fy;
+              if (v >= 0.05) a = v;
+            }
+          }
+        }
+        segA[i - 1] = a;
       }
+      const run2 = FLAT_RUN * FLAT_RUN * f.s * f.s;
+      // cur: the path being drawn; (ax, ay) its last vertex; (px, py) a straight end still waiting to be drawn
+      let cur = -1, ax = 0, ay = 0, px = 0, py = 0, pend = false;
+      for (let i = 0; i < n; i++) {
+        const ap = i > 0 ? segA[i - 1] : -1, an = i < n - 1 ? segA[i] : -1;
+        if (ap < 0 && an < 0) { if (pend) paths[cur].lineTo(px, py); pend = false; cur = -1; continue; }
+        const x = X[i], y = Y[i];
+        const b = Math.min(NA - 1, Math.floor((ap < 0 ? an : an < 0 ? ap : 0.5 * (ap + an)) * NA));
+        const x0 = ap < 0 ? x : 0.5 * (X[i - 1] + x), y0 = ap < 0 ? y : 0.5 * (Y[i - 1] + y);
+        const x1 = an < 0 ? x : 0.5 * (x + X[i + 1]), y1 = an < 0 ? y : 0.5 * (y + Y[i + 1]);
+        if (b !== cur) {
+          if (pend) paths[cur].lineTo(px, py);
+          paths[b].moveTo(x0, y0); cur = b; ax = x0; ay = y0; pend = false;
+        }
+        // a curve piece bulges from its chord by half its control point's offset from the chord's middle
+        let flat = ap < 0 || an < 0;
+        if (!flat) { const ox = x - 0.5 * (x0 + x1), oy = y - 0.5 * (y0 + y1); flat = ox * ox + oy * oy <= 4 * FLAT * FLAT; }
+        if (flat) {
+          if (pend) {
+            const cx = x1 - ax, cy = y1 - ay, l2 = cx * cx + cy * cy, cr = (px - ax) * cy - (py - ay) * cx;
+            if (!(l2 < run2 && cr * cr <= FLAT * FLAT * l2)) { paths[b].lineTo(px, py); ax = px; ay = py; }
+          }
+          px = x1; py = y1; pend = true;
+        } else {
+          if (pend) { paths[b].lineTo(px, py); pend = false; }
+          paths[b].quadraticCurveTo(x, y, x1, y1); ax = x1; ay = y1;
+        }
+        if (an < 0) { if (pend) paths[b].lineTo(px, py); pend = false; cur = -1; }
+      }
+      if (pend) paths[cur].lineTo(px, py);
     }
     ctx.lineWidth = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (let i = 0; i < NA; i++) { ctx.strokeStyle = 'rgba(' + INK + ',' + ALPHA[i] + ')'; ctx.stroke(paths[i]); }
@@ -594,22 +671,25 @@ export function createSmoke(opts) {
     W = canvas.clientWidth || hero.clientWidth; H = canvas.clientHeight || hero.clientHeight; Hh = Math.min(H, hero.clientHeight);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     const q = degraded > 1 ? 1.5 : 1;
-    const want = clamp(Math.sqrt(W * H / CELLS), 5, 14) * q;
+    const want = Math.max(clamp(Math.sqrt(W * H / (coarse ? CELLS_COARSE : CELLS)), 5, 14), Math.sqrt(W * H / CELLS_MAX)) * q;
     nx = Math.max(8, Math.round(W / want));
-    CELL = W / nx;                      // the grid fits the canvas exactly across
+    CELL = W / nx; iC = 1 / CELL;       // the grid fits the canvas exactly across
     ny = Math.max(8, Math.ceil(H / CELL));
     sw = nx + 1;
     iters = Math.min(26, Math.round(ITER * Math.max(1, Math.max(nx, ny) / Math.min(nx, ny) / 1.8)));
     NU = sw * ny; NV = nx * (ny + 1); NC = nx * ny; NK = sw * (ny + 1);
-    u = new Float32Array(NU); uh = new Float32Array(NU); u2 = new Float32Array(NU);
+    u = new Float32Array(NU); uh = new Float32Array(NU); u2 = new Float32Array(NU); xu = new Float64Array(NU); xv = new Float64Array(NV);
     v = new Float32Array(NV); vh = new Float32Array(NV); v2 = new Float32Array(NV);
-    P = new Float32Array(NC); dvg = new Float32Array(NC); sol = new Uint8Array(NC); nnb = new Uint8Array(NC);
+    P = new Float32Array(NC); dvg = new Float32Array(NC); sol = new Uint8Array(NC); nnb = new Uint8Array(NC); nbm = new Uint8Array(NC);
     uf = new Uint8Array(NU); vf = new Uint8Array(NV);
-    s = clamp(W / 200, 5, 10) * q;
+    s = clamp(W / 200, 5, 10) * clamp(W / 3200, 1, 1.4) * q;   // the smoke crosses a very wide screen: space it out a little
+    life0 = Math.max(LIFE0, LIFE_W * W / U0); life1 = life0 + (LIFE1 - LIFE0);
+    mmax = MARKERS * Math.max(1, W / 1600);
     N = Math.round(clamp(Math.round(Hh / (coarse ? 26 : LINE_GAP)), 20, 88) / q);
     cap = Math.ceil(2.6 * (W + 120) / s) + 64;
     scap = 3 * cap + 32;   // room to resample before trimming, so the newest ink is never the part that is dropped
     sx = new Float32Array(scap); sy = new Float32Array(scap); sd = new Float32Array(scap); sg = new Float32Array(scap);
+    segA = new Float32Array(cap); kS = new Int8Array(cap); kC = new Float32Array(cap);
     setType();
     initField();
     seedLines();
@@ -648,26 +728,32 @@ export function createSmoke(opts) {
     raf = 0;
     if (held || hidden || !visible) return;
     raf = requestAnimationFrame(frame);
+    // the screen's frame interval, and the whole number of frames to a draw: evenly paced, at FRAME_HZ or a little
+    // over. Once a draw is half a period late (the browser is busy) the next frame is drawn whatever the count
+    if (rafT && now - rafT > 1 && now - rafT < 40) iv += (now - rafT - iv) * 0.05;
+    rafT = now;
+    if (last && ++skip < Math.floor(1000 / FRAME_HZ / iv + 0.2) && now - last < 1500 / FRAME_HZ) return;
+    skip = 0;
     let dt = last ? (now - last) / 1000 : 1 / 60;
     last = now;
-    if (dt < 0.004) return;
     if (dt > 0.05) dt = 0.05;
     const t0 = performance.now();
-    frameN++;
     simT += dt; acc += dt;
-    // once degraded the air is stepped every other frame; the smoke still moves every frame
-    if (degraded < 1 || (frameN & 1) === 0) { fluid(Math.min(acc, 0.1), now); acc = 0; fluidMs += (performance.now() - t0 - fluidMs) * 0.1; }
+    // the air is stepped AIR_HZ times a second, and less often once degraded; the smoke still moves every
+    // frame. The threshold sits under a whole period so that frame jitter cannot push a step to a third frame
+    if (acc >= 0.8 / AIR_HZ[Math.min(degraded, 2)]) { fluid(Math.min(acc, 0.1), now); acc = 0; fluidMs += (performance.now() - t0 - fluidMs) * 0.1; }
     moveLines(dt);
     draw(false);
-    stepMs += (performance.now() - t0 - stepMs) * 0.1;
+    stepMs += (performance.now() - t0 - stepMs) * 0.03;   // slow, so the frames that step the air average out
     if (stepMs > 14) { if (++slowN > 60) { slowN = 0; degrade(); } } else slowN = 0;
   }
+  // a slow device steps the air less often (AIR_HZ); the smoke keeps its shape, nothing is rebuilt
   function degrade() {
     degraded++;
-    if (degraded === 2) rebuild(); else if (degraded > 2) held = true;
+    if (degraded > 2) held = true;
   }
   function loop() { if (!raf && warmed && !held && !hidden && visible) { last = 0; raf = requestAnimationFrame(frame); } }
-  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; last = 0; }
+  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; last = 0; rafT = 0; }
   // let the body start shedding, and its wake reach the right edge, before the canvas is shown
   function warm(done) {
     let i = 0;

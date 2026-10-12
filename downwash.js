@@ -1,11 +1,13 @@
 // Downstream: smoke and a hovering drone beside the CV, drawn with Canvas 2D.
-// The flow is an incompressible fluid solved on a coarse grid (semi-Lagrangian advection,
-// vorticity confinement and a pressure projection, after Stam). The smoke is a density field on
-// a finer grid, carried by the flow and drawn as a small image scaled up, so it stays soft.
-// The drone's body is a solid in the flow and its two rotors are actuator discs: the cells under
-// each blade are pushed toward a fast downward jet and the projection supplies the intake above,
-// so smoke that drifts over the drone is pulled down through the blades. The pointer pushes the
-// fluid and the drone. No dependencies. The 2D simplex noise is Gustavson's.
+// The flow is an incompressible fluid on a coarse staggered (MAC) grid, as in the hero: semi-Lagrangian
+// advection, a little viscosity, vorticity confinement and a pressure projection whose divergence,
+// Laplacian and gradient agree, so the air neither piles up nor thins out. The smoke is a density field
+// on a finer grid, carried by the flow and drawn as a small image scaled up, so it stays soft.
+// The drone's body is a solid that moves and turns through the air, and its two rotors are actuator
+// discs: a thin slab just under each blade is pushed toward a fast jet along the drone's own down, and
+// the projection supplies the intake above, so smoke that drifts over the drone is pulled down through
+// the blades. The pointer pushes the fluid and the drone. No dependencies. The 2D simplex noise is
+// Gustavson's.
 
 const F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
 const GX = new Float32Array([1, -1, 1, -1, 1, -1, 0, 0]);
@@ -36,6 +38,7 @@ function noise2(x, y) {
   if (t2 > 0) { const g = perm[ii + 1 + perm[jj + 1]] & 7; t2 *= t2; n += t2 * t2 * (GX[g] * x2 + GY[g] * y2); }
   return 70 * n;
 }
+const RCP = new Float64Array([0, 1, 1 / 2, 1 / 3, 1 / 4]);   // 1 / n for the pressure sweep, 0 for a boxed-in cell
 function smooth(t) { return t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t); }
 
 // ---- tunables ----
@@ -89,19 +92,25 @@ export function createDownwash(opts) {
   if (!ctx || !octx) return null;
 
   let W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 2);
-  // velocity grid: interior cells 1..nx, 1..ny with a one-cell border; cell (i, j) is centred at ((i - .5) CELL, (j - .5) CELL)
-  let CELL = 6, nx = 0, ny = 0, st = 0;
-  let u = null, v = null, u2 = null, v2 = null, p = null, dv = null, curl = null, sol = null, solBase = null;
+  // Staggered (MAC) velocity grid, as in the hero: cells (i, j) centred at ((i + .5) h, (j + .5) h) hold the
+  // pressure; u lives on the vertical faces, (nx + 1) by ny with u[i, j] at (i h, (j + .5) h), and v on the
+  // horizontal ones, nx by (ny + 1) with v[i, j] at ((i + .5) h, j h). The flow through a face is exactly the
+  // velocity stored on it, so the projection leaves every cell with zero net flow
+  let CELL = 6, nx = 0, ny = 0, su = 0, NU = 0, NV = 0, NC = 0;
+  let u = null, v = null, u2 = null, v2 = null, p = null, dv = null, sol = null, uf = null, vf = null, nnb = null;
+  let wz = null, fcx = null, fcy = null;   // curl, and the confinement force, at the cell centres
   let iter = ITER;
   // smoke grid: dnx x dny cells of dcell px, no border; cell (i, j) is centred at ((i + .5) dcell, (j + .5) dcell)
   let dnx = 0, dny = 0, dcell = 3;
   let d = null, d2 = null, mask = null, img = null;
   // where each smoke cell's departure point lands this step: base index (-1 for none) and bilinear weights
   let dA = null, dFx = null, dFy = null;
+  // each smoke cell's centre on the u and v grids (fixed): base index and bilinear weights
+  let cUA = null, cUx = null, cUy = null, cVA = null, cVx = null, cVy = null;
   const alut = new Float32Array(1025);
   for (let n = 0; n <= 1024; n++) alut[n] = ALPHA_MAX * (1 - Math.exp(-ALPHA_K * n / 256));
-  // the drone
-  const D = { x: 0, y: 0, vx: 0, vy: 0, tilt: 0, hx: 0, hy: 0, phase: 0 };
+  // the drone; w is its rate of tilt
+  const D = { x: 0, y: 0, vx: 0, vy: 0, tilt: 0, w: 0, hx: 0, hy: 0, phase: 0 };
   // pointer
   const ptr = { on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0 };
   let simT = 0;
@@ -109,7 +118,6 @@ export function createDownwash(opts) {
   let running = false, raf = 0, last = 0, frameN = 0, degraded = 0;
   const times = []; let monT = 0, stepMs = 0;
   let visible = false, hidden = document.hidden, held = false, frozen = false, warmed = false;
-  let sx = 0, sy = 0;
 
   // ---- geometry ----
   function rebuild() {
@@ -117,24 +125,31 @@ export function createDownwash(opts) {
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     CELL = Math.max(CELL_MIN, Math.min(CELL_MAX, Math.round(Math.sqrt(W * H / CELLS))));
-    nx = Math.ceil(W / CELL); ny = Math.ceil(H / CELL); st = nx + 2;
-    const size = st * (ny + 2);
-    u = new Float32Array(size); v = new Float32Array(size);
-    u2 = new Float32Array(size); v2 = new Float32Array(size);
-    p = new Float32Array(size); dv = new Float32Array(size); curl = new Float32Array(size);
-    sol = new Uint8Array(size); solBase = new Uint8Array(size);
-    // border codes: 3 = inflow (no pressure gradient through it), 4 = open (pressure zero); 1 = the drone
-    for (let j = 0; j <= ny + 1; j++) { solBase[j * st] = 3; solBase[j * st + nx + 1] = 4; }
-    for (let i = 1; i <= nx; i++) { solBase[i] = 4; solBase[(ny + 1) * st + i] = 4; }
+    nx = Math.ceil(W / CELL); ny = Math.ceil(H / CELL); su = nx + 1;
+    NU = su * ny; NV = nx * (ny + 1); NC = nx * ny;
+    u = new Float32Array(NU); u2 = new Float32Array(NU); uf = new Uint8Array(NU);
+    v = new Float32Array(NV); v2 = new Float32Array(NV); vf = new Uint8Array(NV);
+    p = new Float32Array(NC); dv = new Float32Array(NC); sol = new Uint8Array(NC); nnb = new Uint8Array(NC);
+    wz = new Float32Array(NC); fcx = new Float32Array(NC); fcy = new Float32Array(NC);
     dcell = CELL / DYE; dnx = nx * DYE; dny = ny * DYE;
-    d = new Float32Array(dnx * dny); d2 = new Float32Array(dnx * dny); mask = new Float32Array(dnx * dny);
-    dA = new Int32Array(dnx * dny); dFx = new Float64Array(dnx * dny); dFy = new Float64Array(dnx * dny);
+    const nd = dnx * dny;
+    d = new Float32Array(nd); d2 = new Float32Array(nd); mask = new Float32Array(nd);
+    dA = new Int32Array(nd); dFx = new Float64Array(nd); dFy = new Float64Array(nd);
+    cUA = new Int32Array(nd); cUx = new Float64Array(nd); cUy = new Float64Array(nd);
+    cVA = new Int32Array(nd); cVx = new Float64Array(nd); cVy = new Float64Array(nd);
     for (let j = 0; j < dny; j++) {
       const y = (j + 0.5) * dcell;
-      const fy = smooth((H - y) / (FADE_B * H)) * smooth(y / (FADE_T * H));
       for (let i = 0; i < dnx; i++) {
-        const x = (i + 0.5) * dcell;
-        mask[j * dnx + i] = fy * smooth((W - x) / (FADE_R * W));
+        const x = (i + 0.5) * dcell, k = j * dnx + i;   // placed as sampleU and sampleV would place them
+        let fx = x / CELL, fy = y / CELL - 0.5;
+        if (fx < 0) fx = 0; else if (fx > nx - 0.001) fx = nx - 0.001;
+        if (fy < 0) fy = 0; else if (fy > ny - 1.001) fy = ny - 1.001;
+        cUA[k] = (fy | 0) * su + (fx | 0); cUx[k] = fx - (fx | 0); cUy[k] = fy - (fy | 0);
+        fx = x / CELL - 0.5; fy = y / CELL;
+        if (fx < 0) fx = 0; else if (fx > nx - 1.001) fx = nx - 1.001;
+        if (fy < 0) fy = 0; else if (fy > ny - 0.001) fy = ny - 0.001;
+        cVA[k] = (fy | 0) * nx + (fx | 0); cVx[k] = fx - (fx | 0); cVy[k] = fy - (fy | 0);
+        mask[k] = smooth((H - y) / (FADE_B * H)) * smooth(y / (FADE_T * H)) * smooth((W - x) / (FADE_R * W));
       }
     }
     off.width = dnx; off.height = dny;
@@ -142,9 +157,9 @@ export function createDownwash(opts) {
     const px = img.data;
     for (let k = 0; k < px.length; k += 4) { px[k] = INK_R; px[k + 1] = INK_G; px[k + 2] = INK_B; }
     D.hx = HOVER_X * W; D.hy = HOVER_Y * H;
-    D.x = D.hx; D.y = D.hy; D.vx = 0; D.vy = 0; D.tilt = 0;
+    D.x = D.hx; D.y = D.hy; D.vx = 0; D.vy = 0; D.tilt = 0; D.w = 0;
     simT = 0;
-    for (let k = 0; k < size; k++) u[k] = U_IN * IN_LOW;
+    u.fill(U_IN * IN_LOW);
   }
 
   // ---- pointer ----
@@ -186,161 +201,265 @@ export function createDownwash(opts) {
     if (D.x < mx) { D.x = mx; D.vx = 0; } else if (D.x > W - mx) { D.x = W - mx; D.vx = 0; }
     if (D.y < my0) { D.y = my0; D.vy = 0; } else if (D.y > my1) { D.y = my1; D.vy = 0; }
     const target = Math.max(-TILT_MAX, Math.min(TILT_MAX, TILT_GAIN * cx));
+    const tilt0 = D.tilt;
     D.tilt += (target - D.tilt) * Math.min(1, dt / TILT_TAU);
+    D.w = (D.tilt - tilt0) / dt;
     D.phase += 2 * Math.PI * RPS * dt;
   }
+  // the velocity of the drone's body at (x, y): it moves and turns as one piece
+  function bodyU(x, y) { return D.vx - D.w * (y - D.y); }
+  function bodyV(x, y) { return D.vy + D.w * (x - D.x); }
 
-  // the body is the only solid: the arm is thinner than a cell and the discs sit on it.
-  // The top edge is open only above the drone, so the intake draws from there and not down the emitter side.
+  // The body is the only solid: the arm is thinner than a cell and the discs sit on it. A face is free when
+  // the projection may change it; the others are given: the inflow on the left, the top edge except the
+  // open stretch above the drone (so the intake draws from there and not down the emitter side), and every
+  // face that touches the body, which moves with it. The right and bottom edges are open (pressure zero).
   function markDrone() {
-    sol.set(solBase);
-    const x0 = D.x - TOP_WIN, x1 = D.x + TOP_WIN;
-    for (let i = 1; i <= nx; i++) { const x = (i - 0.5) * CELL; sol[i] = x >= x0 && x <= x1 ? 4 : 3; }
+    sol.fill(0);
     const c = Math.cos(D.tilt), s = Math.sin(D.tilt), r = 30;
-    const i0 = Math.max(1, Math.floor((D.x - r) / CELL + 0.5)), i1 = Math.min(nx, Math.ceil((D.x + r) / CELL + 0.5));
-    const j0 = Math.max(1, Math.floor((D.y - r) / CELL + 0.5)), j1 = Math.min(ny, Math.ceil((D.y + r) / CELL + 0.5));
+    const i0 = Math.max(0, Math.floor((D.x - r) / CELL)), i1 = Math.min(nx - 1, Math.ceil((D.x + r) / CELL));
+    const j0 = Math.max(0, Math.floor((D.y - r) / CELL)), j1 = Math.min(ny - 1, Math.ceil((D.y + r) / CELL));
     for (let j = j0; j <= j1; j++) {
-      const dy = (j - 0.5) * CELL - D.y;
+      const dy = (j + 0.5) * CELL - D.y;
       for (let i = i0; i <= i1; i++) {
-        const dx = (i - 0.5) * CELL - D.x;
+        const dx = (i + 0.5) * CELL - D.x;
         const lx = dx * c + dy * s, ly = -dx * s + dy * c;
-        if (lx > -17 && lx < 17 && ly > 0 && ly < 14) sol[j * st + i] = 1;
+        if (lx > -17 && lx < 17 && ly > 0 && ly < 14) sol[j * nx + i] = 1;
+      }
+    }
+    for (let j = 0; j < ny; j++) {
+      const row = j * nx;
+      for (let i = 0; i <= nx; i++) {
+        const k = j * su + i;
+        if (i === 0) uf[k] = 0;
+        else if (i === nx) uf[k] = sol[row + nx - 1] ? 0 : 1;
+        else uf[k] = sol[row + i - 1] || sol[row + i] ? 0 : 1;
+      }
+    }
+    const x0 = D.x - TOP_WIN, x1 = D.x + TOP_WIN;
+    for (let i = 0; i < nx; i++) { const x = (i + 0.5) * CELL; vf[i] = x >= x0 && x <= x1 && !sol[i] ? 1 : 0; }
+    for (let j = 1; j < ny; j++) for (let i = 0; i < nx; i++) vf[j * nx + i] = sol[(j - 1) * nx + i] || sol[j * nx + i] ? 0 : 1;
+    for (let i = 0; i < nx; i++) vf[ny * nx + i] = sol[(ny - 1) * nx + i] ? 0 : 1;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const c0 = j * nx + i, k = j * su + i;
+        nnb[c0] = sol[c0] ? 0 : uf[k] + uf[k + 1] + vf[c0] + vf[c0 + nx];
       }
     }
   }
   function solidAt(x, y) {
-    let i = Math.floor(x / CELL) + 1, j = Math.floor(y / CELL) + 1;
-    if (i < 1) i = 1; else if (i > nx) i = nx;
-    if (j < 1) j = 1; else if (j > ny) j = ny;
-    return sol[j * st + i] === 1;
+    let i = Math.floor(x / CELL), j = Math.floor(y / CELL);
+    if (i < 0) i = 0; else if (i > nx - 1) i = nx - 1;
+    if (j < 0) j = 0; else if (j > ny - 1) j = ny - 1;
+    return sol[j * nx + i] === 1;
   }
 
   // ---- fluid ----
-  function sampleGrid(x, y) {
-    let gx = x / CELL + 0.5, gy = y / CELL + 0.5;
-    if (gx < 0) gx = 0; else if (gx > nx + 1) gx = nx + 1;
-    if (gy < 0) gy = 0; else if (gy > ny + 1) gy = ny + 1;
-    let i = Math.floor(gx), j = Math.floor(gy);
-    if (i > nx) i = nx;
-    if (j > ny) j = ny;
-    const fx = gx - i, fy = gy - j;
-    const a = j * st + i, b = a + st;
-    sx = (u[a] * (1 - fx) + u[a + 1] * fx) * (1 - fy) + (u[b] * (1 - fx) + u[b + 1] * fx) * fy;
-    sy = (v[a] * (1 - fx) + v[a + 1] * fx) * (1 - fy) + (v[b] * (1 - fx) + v[b + 1] * fx) * fy;
+  function sampleU(A, x, y) {
+    let fx = x / CELL, fy = y / CELL - 0.5;
+    if (fx < 0) fx = 0; else if (fx > nx - 0.001) fx = nx - 0.001;
+    if (fy < 0) fy = 0; else if (fy > ny - 1.001) fy = ny - 1.001;
+    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, k = j * su + i;
+    return (A[k] * (1 - tx) + A[k + 1] * tx) * (1 - ty) + (A[k + su] * (1 - tx) + A[k + su + 1] * tx) * ty;
+  }
+  function sampleV(A, x, y) {
+    let fx = x / CELL - 0.5, fy = y / CELL;
+    if (fx < 0) fx = 0; else if (fx > nx - 1.001) fx = nx - 1.001;
+    if (fy < 0) fy = 0; else if (fy > ny - 0.001) fy = ny - 0.001;
+    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, k = j * nx + i;
+    return (A[k] * (1 - tx) + A[k + 1] * tx) * (1 - ty) + (A[k + nx] * (1 - tx) + A[k + nx + 1] * tx) * ty;
   }
 
-  // inflow on the left with a wobble, the top open above the drone and a free-slip wall elsewhere, outflow right and bottom; every solid cell mirrors its
-  // fluid neighbours about the shared face around the body's velocity (free slip)
   // the drift: full inside the emitter band, less elsewhere
   function band(y) { const y0 = EMIT[0] * H, y1 = EMIT[1] * H, ramp = 0.35 * (y1 - y0); return smooth((y - y0 + ramp) / ramp) * smooth((y1 + ramp - y) / ramp); }
   function drift(y) { return U_IN * (IN_LOW + (1 - IN_LOW) * band(y)); }
 
-  function boundaries(t) {
-    for (let j = 1; j <= ny; j++) {
-      const y = (j - 0.5) * CELL, l = j * st, r = l + nx + 1;
-      const band_ = band(y);
-      u[l] = drift(y) * (1 + IN_NOISE * noise2(y * IN_KY, t * IN_KT));
-      v[l] = U_IN * IN_NOISE * band_ * noise2(y * IN_KY + 5.1, t * IN_KT * 1.3);
-      u[r] = Math.max(0, u[r - 1]); v[r] = v[r - 1];
+  // the given faces: the inflow (with a wobble, and a sideways one carried in on the first column of v),
+  // the closed stretches of the top edge, and the body's faces, which move with it
+  function bc(t) {
+    for (let j = 0; j < ny; j++) {
+      const y = (j + 0.5) * CELL;
+      u[j * su] = drift(y) * (1 + IN_NOISE * noise2(y * IN_KY, t * IN_KT));
     }
-    for (let i = 0; i <= nx + 1; i++) {
-      const b = (ny + 1) * st + i;
-      u[i] = u[i + st]; v[i] = sol[i] === 4 ? v[i + st] : -v[i + st];
-      u[b] = u[b - st]; v[b] = Math.max(0, v[b - st]);
+    for (let j = 1; j < ny; j++) {
+      const y = j * CELL;
+      v[j * nx] = U_IN * IN_NOISE * band(y) * noise2(y * IN_KY + 5.1, t * IN_KT * 1.3);
     }
-    const bu = D.vx, bv = D.vy;
-    for (let j = 1; j <= ny; j++) {
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k] !== 1) continue;
-        let su = 0, sv = 0, n = 0;
-        if (!sol[k - 1]) { su -= u[k - 1] - bu; sv += v[k - 1] - bv; n++; }
-        if (!sol[k + 1]) { su -= u[k + 1] - bu; sv += v[k + 1] - bv; n++; }
-        if (!sol[k - st]) { su += u[k - st] - bu; sv -= v[k - st] - bv; n++; }
-        if (!sol[k + st]) { su += u[k + st] - bu; sv -= v[k + st] - bv; n++; }
-        if (n) { u[k] = bu + su / n; v[k] = bv + sv / n; } else { u[k] = bu; v[k] = bv; }
-      }
-    }
-  }
-
-  // blend the velocity inside a gaussian spot toward (tx, ty)
-  function splat(cx, cy, r, tx, ty, k0) {
-    const i0 = Math.max(1, Math.floor((cx - r) / CELL + 0.5)), i1 = Math.min(nx, Math.ceil((cx + r) / CELL + 0.5));
-    const j0 = Math.max(1, Math.floor((cy - r) / CELL + 0.5)), j1 = Math.min(ny, Math.ceil((cy + r) / CELL + 0.5));
-    const inv = 2 / (r * r), r2max = r * r;
+    for (let i = 0; i < nx; i++) if (!vf[i]) v[i] = 0;
+    const r = 30 + 2 * CELL;
+    const i0 = Math.max(0, Math.floor((D.x - r) / CELL)), i1 = Math.min(nx - 1, Math.ceil((D.x + r) / CELL));
+    const j0 = Math.max(0, Math.floor((D.y - r) / CELL)), j1 = Math.min(ny - 1, Math.ceil((D.y + r) / CELL));
     for (let j = j0; j <= j1; j++) {
-      const y = (j - 0.5) * CELL - cy;
+      const y = (j + 0.5) * CELL;
+      for (let i = Math.max(1, i0); i <= i1 + 1 && i <= nx; i++) {
+        const c0 = j * nx + i;
+        if ((i < nx && sol[c0]) || sol[c0 - 1]) u[j * su + i] = bodyU(i * CELL, y);
+      }
+    }
+    for (let j = j0; j <= j1 + 1 && j <= ny; j++) {
+      const y = j * CELL;
       for (let i = i0; i <= i1; i++) {
-        const k = j * st + i;
-        if (sol[k]) continue;
-        const x = (i - 0.5) * CELL - cx, r2 = x * x + y * y;
-        if (r2 > r2max) continue;
-        const w = k0 * Math.exp(-r2 * inv);
-        u[k] += (tx - u[k]) * w; v[k] += (ty - v[k]) * w;
+        const k = j * nx + i;
+        if ((j < ny && sol[k]) || (j > 0 && sol[k - nx])) v[k] = bodyV((i + 0.5) * CELL, y);
       }
     }
   }
 
-  // each rotor is an actuator disc: a thin slab under the blade whose cells are pushed toward the jet
+  function advect(dt) {
+    for (let j = 0; j < ny; j++) {
+      const y = (j + 0.5) * CELL;
+      for (let i = 0; i <= nx; i++) {
+        const k = j * su + i;
+        if (!uf[k]) { u2[k] = u[k]; continue; }
+        const x = i * CELL;
+        u2[k] = sampleU(u, x - dt * u[k], y - dt * sampleV(v, x, y));
+      }
+    }
+    for (let j = 0; j <= ny; j++) {
+      const y = j * CELL;
+      for (let i = 0; i < nx; i++) {
+        const k = j * nx + i;
+        if (!vf[k]) { v2[k] = v[k]; continue; }
+        const x = (i + 0.5) * CELL;
+        v2[k] = sampleV(v, x - dt * sampleU(u, x, y), y - dt * v[k]);
+      }
+    }
+    let t = u; u = u2; u2 = t; t = v; v = v2; v2 = t;
+  }
+
+  // explicit viscosity on the free faces; a given face (the body, a wall) takes part as a neighbour
+  function diffuse(dt) {
+    const kk = Math.min(0.2, VISC * dt / (CELL * CELL));
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i <= nx; i++) {
+        const k = j * su + i;
+        if (!uf[k]) { u2[k] = u[k]; continue; }
+        const l = i > 0 ? k - 1 : k, r = i < nx ? k + 1 : k, a = j > 0 ? k - su : k, b = j < ny - 1 ? k + su : k;
+        u2[k] = u[k] + kk * (u[l] + u[r] + u[a] + u[b] - 4 * u[k]);
+      }
+    }
+    for (let j = 0; j <= ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const k = j * nx + i;
+        if (!vf[k]) { v2[k] = v[k]; continue; }
+        const l = i > 0 ? k - 1 : k, r = i < nx - 1 ? k + 1 : k, a = j > 0 ? k - nx : k, b = j < ny ? k + nx : k;
+        v2[k] = v[k] + kk * (v[l] + v[r] + v[a] + v[b] - 4 * v[k]);
+      }
+    }
+    let t = u; u = u2; u2 = t; t = v; v = v2; v2 = t;
+  }
+
+  // blend the free faces inside a gaussian spot toward (tx, ty)
+  function splat(cx, cy, r, tx, ty, k0) {
+    const inv = 2 / (r * r), r2max = r * r;
+    const i0 = Math.max(0, Math.floor((cx - r) / CELL)), i1 = Math.min(nx, Math.ceil((cx + r) / CELL));
+    const j0 = Math.max(0, Math.floor((cy - r) / CELL)), j1 = Math.min(ny, Math.ceil((cy + r) / CELL));
+    for (let j = j0; j <= Math.min(ny - 1, j1); j++) {
+      const y = (j + 0.5) * CELL - cy;
+      for (let i = i0; i <= i1; i++) {
+        const k = j * su + i;
+        if (!uf[k]) continue;
+        const x = i * CELL - cx, r2 = x * x + y * y;
+        if (r2 > r2max) continue;
+        u[k] += (tx - u[k]) * k0 * Math.exp(-r2 * inv);
+      }
+    }
+    for (let j = j0; j <= j1; j++) {
+      const y = j * CELL - cy;
+      for (let i = i0; i <= Math.min(nx - 1, i1); i++) {
+        const k = j * nx + i;
+        if (!vf[k]) continue;
+        const x = (i + 0.5) * CELL - cx, r2 = x * x + y * y;
+        if (r2 > r2max) continue;
+        v[k] += (ty - v[k]) * k0 * Math.exp(-r2 * inv);
+      }
+    }
+  }
+
+  // each rotor is an actuator disc: a thin slab just under the blade whose faces are pushed toward the jet,
+  // which leaves along the drone's own down
   function rotors(dt) {
     const c = Math.cos(D.tilt), s = Math.sin(D.tilt);
     const jx = -s * JET, jy = c * JET, k0 = Math.min(1, dt / JET_TAU);
-    const half = Math.max(4, 0.8 * CELL), ly0 = BLADE_Y + 4;
+    const half = Math.max(4, 0.8 * CELL), ly0 = BLADE_Y + 4, R = ROTOR_R + 3;
     for (let side = -1; side <= 1; side += 2) {
-      const hx = D.x + side * ARM * c + ly0 * s, hy = D.y + side * ARM * s - ly0 * c;
-      const r = ROTOR_R + 3 + half;
-      const i0 = Math.max(1, Math.floor((hx - r) / CELL + 0.5)), i1 = Math.min(nx, Math.ceil((hx + r) / CELL + 0.5));
-      const j0 = Math.max(1, Math.floor((hy - r) / CELL + 0.5)), j1 = Math.min(ny, Math.ceil((hy + r) / CELL + 0.5));
-      for (let j = j0; j <= j1; j++) {
-        const dy = (j - 0.5) * CELL - hy;
+      // the hub, (side ARM, ly0) in the drone's frame, turned into the canvas as drawDrone turns it
+      const hx = D.x + side * ARM * c - ly0 * s, hy = D.y + side * ARM * s + ly0 * c;
+      const r = R + half + CELL;
+      const i0 = Math.max(0, Math.floor((hx - r) / CELL)), i1 = Math.min(nx, Math.ceil((hx + r) / CELL));
+      const j0 = Math.max(0, Math.floor((hy - r) / CELL)), j1 = Math.min(ny, Math.ceil((hy + r) / CELL));
+      for (let j = j0; j <= Math.min(ny - 1, j1); j++) {
+        const dy = (j + 0.5) * CELL - hy;
         for (let i = i0; i <= i1; i++) {
-          const k = j * st + i;
-          if (sol[k]) continue;
-          const dx = (i - 0.5) * CELL - hx;
-          const lx = dx * c + dy * s, ly = -dx * s + dy * c;
-          if (lx < -ROTOR_R - 3 || lx > ROTOR_R + 3 || ly < -half || ly > half) continue;
-          const kk = k0 * smooth((ROTOR_R + 3 - Math.abs(lx)) / 8);
-          u[k] += (jx - u[k]) * kk; v[k] += (jy - v[k]) * kk;
+          const k = j * su + i;
+          if (!uf[k]) continue;
+          const dx = i * CELL - hx, lx = dx * c + dy * s, ly = -dx * s + dy * c;
+          if (lx < -R || lx > R || ly < -half || ly > half) continue;
+          u[k] += (jx - u[k]) * k0 * smooth((R - Math.abs(lx)) / 8);
+        }
+      }
+      for (let j = j0; j <= j1; j++) {
+        const dy = j * CELL - hy;
+        for (let i = i0; i <= Math.min(nx - 1, i1); i++) {
+          const k = j * nx + i;
+          if (!vf[k]) continue;
+          const dx = (i + 0.5) * CELL - hx, lx = dx * c + dy * s, ly = -dx * s + dy * c;
+          if (lx < -R || lx > R || ly < -half || ly > half) continue;
+          v[k] += (jy - v[k]) * k0 * smooth((R - Math.abs(lx)) / 8);
         }
       }
     }
   }
 
-  function computeCurl() {
-    for (let j = 1; j <= ny; j++) {
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k] || sol[k - 1] || sol[k + 1] || sol[k - st] || sol[k + st]) { curl[k] = 0; continue; }
-        curl[k] = 0.5 * ((v[k + 1] - v[k - 1]) - (u[k + st] - u[k - st])) / CELL;
+  function forces(dt) {
+    // the curl at the cell centres, from the face velocities averaged to the centres
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const c0 = j * nx + i;
+        if (i === 0 || j === 0 || i === nx - 1 || j === ny - 1 || sol[c0] || sol[c0 - 1] || sol[c0 + 1] || sol[c0 - nx] || sol[c0 + nx]) { wz[c0] = 0; continue; }
+        const k = j * su + i;
+        const vr = v[c0 + 1] + v[c0 + 1 + nx], vl = v[c0 - 1] + v[c0 - 1 + nx];
+        const ud = u[k + su] + u[k + su + 1], uu = u[k - su] + u[k - su + 1];
+        wz[c0] = 0.25 * ((vr - vl) - (ud - uu)) / CELL;
       }
     }
-  }
-
-  function forces(dt) {
-    computeCurl();
-    const bb = BUOY * dt, kd = Math.min(1, dt / DAMP), gate2 = CONF_GATE * CONF_GATE;
-    for (let j = 2; j < ny; j++) {
-      const dj = (j - 1) * DYE * dnx, ua = drift((j - 0.5) * CELL);
-      for (let i = 2; i < nx; i++) {
-        const k = j * st + i;
-        if (sol[k]) continue;
-        // smoke is warm: it rises a little
-        const q = dj + (i - 1) * DYE;
-        v[k] -= bb * 0.25 * (d[q] + d[q + 1] + d[q + dnx] + d[q + dnx + 1]);
-        // everything relaxes toward the drift
-        u[k] += (ua - u[k]) * kd; v[k] -= v[k] * kd;
-        // vorticity confinement keeps the curls in the slow smoke; the jet is left alone
-        const sp2 = u[k] * u[k] + v[k] * v[k];
+    // vorticity confinement keeps the curls in the slow smoke; the jet is left alone
+    const gate2 = CONF_GATE * CONF_GATE;
+    fcx.fill(0); fcy.fill(0);
+    for (let j = 1; j < ny - 1; j++) {
+      for (let i = 1; i < nx - 1; i++) {
+        const c0 = j * nx + i;
+        if (sol[c0]) continue;
+        const k = j * su + i;
+        const uc = 0.5 * (u[k] + u[k + 1]), vc = 0.5 * (v[c0] + v[c0 + nx]), sp2 = uc * uc + vc * vc;
         if (sp2 >= gate2) continue;
-        const cl = Math.abs(curl[k - 1]), cr = Math.abs(curl[k + 1]), cu = Math.abs(curl[k - st]), cd = Math.abs(curl[k + st]);
-        if (cl > CURL_GATE || cr > CURL_GATE || cu > CURL_GATE || cd > CURL_GATE || Math.abs(curl[k]) > CURL_GATE) continue;
-        const gx = cr - cl, gy = cd - cu;
-        const len = Math.hypot(gx, gy);
+        const cl = Math.abs(wz[c0 - 1]), cr = Math.abs(wz[c0 + 1]), cu = Math.abs(wz[c0 - nx]), cd = Math.abs(wz[c0 + nx]);
+        if (cl > CURL_GATE || cr > CURL_GATE || cu > CURL_GATE || cd > CURL_GATE || Math.abs(wz[c0]) > CURL_GATE) continue;
+        const gx = cr - cl, gy = cd - cu, len = Math.hypot(gx, gy);
         if (len < 1e-6) continue;
-        let f = curl[k] * CONFINE * CELL * (1 - sp2 / gate2);
+        let f = wz[c0] * CONFINE * CELL * (1 - sp2 / gate2);
         if (f > CONF_MAX) f = CONF_MAX; else if (f < -CONF_MAX) f = -CONF_MAX;
-        const w = f * dt / len;
-        u[k] += gy * w; v[k] -= gx * w;
+        fcx[c0] = gy * f / len; fcy[c0] = -gx * f / len;
+      }
+    }
+    // everything relaxes toward the drift; the confinement acts on each face from the cells either side
+    const kd = Math.min(1, dt / DAMP), bb = BUOY * dt;
+    for (let j = 0; j < ny; j++) {
+      const ua = drift((j + 0.5) * CELL), row = j * nx;
+      for (let i = 1; i <= nx; i++) {
+        const k = j * su + i;
+        if (!uf[k]) continue;
+        u[k] += (ua - u[k]) * kd + 0.5 * dt * (fcx[row + i - 1] + (i < nx ? fcx[row + i] : 0));
+      }
+    }
+    // smoke is warm: it rises a little
+    for (let j = 1; j < ny; j++) {
+      const q0 = (2 * j - 1) * dnx;
+      for (let i = 0; i < nx; i++) {
+        const k = j * nx + i;
+        if (!vf[k]) continue;
+        const q = q0 + 2 * i, rho = 0.25 * (d[q] + d[q + 1] + d[q + dnx] + d[q + dnx + 1]);
+        v[k] += -bb * rho - v[k] * kd + 0.5 * dt * (fcy[k - nx] + fcy[k]);
       }
     }
     if (ptr.on) {
@@ -350,82 +469,60 @@ export function createDownwash(opts) {
     rotors(dt);
   }
 
-  function advectField(dt) {
-    for (let j = 1; j <= ny; j++) {
-      const y0 = (j - 0.5) * CELL;
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k]) { u2[k] = u[k]; v2[k] = v[k]; continue; }
-        sampleGrid((i - 0.5) * CELL - u[k] * dt, y0 - v[k] * dt);
-        u2[k] = sx; v2[k] = sy;
-      }
-    }
-    let t = u; u = u2; u2 = t; t = v; v = v2; v2 = t;
-  }
-
-  function diffuse(dt) {
-    const kk = Math.min(0.2, VISC * dt / (CELL * CELL));
-    for (let j = 1; j <= ny; j++) {
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k]) { u2[k] = u[k]; v2[k] = v[k]; continue; }
-        u2[k] = u[k] + kk * (u[k - 1] + u[k + 1] + u[k - st] + u[k + st] - 4 * u[k]);
-        v2[k] = v[k] + kk * (v[k - 1] + v[k + 1] + v[k - st] + v[k + st] - 4 * v[k]);
-      }
-    }
-    let t = u; u = u2; u2 = t; t = v; v = v2; v2 = t;
-  }
-
-  // open borders (code 4) hold pressure zero; the inflow and the body take no pressure gradient
+  // The pressure that makes the flow incompressible. Every free face links its two cells; a free face on the
+  // open right, bottom or top edge links its cell to pressure zero; the inflow, the closed top and the body
+  // pass no pressure gradient. Divergence, Laplacian and gradient are the same compact difference, so the
+  // solve leaves no net flow into any cell (up to the sweeps)
   function project() {
     const h = CELL, h2 = h * h;
-    for (let j = 1; j <= ny; j++) {
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k]) { dv[k] = 0; p[k] = 0; continue; }
-        dv[k] = 0.5 * (u[k + 1] - u[k - 1] + v[k + st] - v[k - st]) / h;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const c0 = j * nx + i, k = j * su + i;
+        if (sol[c0]) { dv[c0] = 0; p[c0] = 0; continue; }
+        dv[c0] = (u[k + 1] - u[k] + v[c0 + nx] - v[c0]) / h;
       }
     }
     for (let it = 0; it < iter; it++) {
-      for (let j = 1; j <= ny; j++) {
-        for (let i = 1; i <= nx; i++) {
-          const k = j * st + i;
-          if (sol[k]) continue;
-          let sum = 0, n = 0, t;
-          t = sol[k - 1]; if (t === 0) { sum += p[k - 1]; n++; } else if (t === 4) n++;
-          t = sol[k + 1]; if (t === 0) { sum += p[k + 1]; n++; } else if (t === 4) n++;
-          t = sol[k - st]; if (t === 0) { sum += p[k - st]; n++; } else if (t === 4) n++;
-          t = sol[k + st]; if (t === 0) { sum += p[k + st]; n++; } else if (t === 4) n++;
-          const gs = n ? (sum - dv[k] * h2) / n : 0;
-          p[k] += OMEGA * (gs - p[k]);
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          const c0 = j * nx + i, n = nnb[c0];
+          if (!n) continue;
+          const k = j * su + i;
+          let sum = 0;
+          if (uf[k] && i > 0) sum += p[c0 - 1];
+          if (uf[k + 1] && i + 1 < nx) sum += p[c0 + 1];
+          if (vf[c0] && j > 0) sum += p[c0 - nx];
+          if (vf[c0 + nx] && j + 1 < ny) sum += p[c0 + nx];
+          p[c0] += OMEGA * ((sum - h2 * dv[c0]) * RCP[n] - p[c0]);
         }
       }
     }
-    for (let j = 1; j <= ny; j++) {
-      for (let i = 1; i <= nx; i++) {
-        const k = j * st + i;
-        if (sol[k]) continue;
-        const pk = p[k];
-        let t;
-        t = sol[k - 1]; const pl = t === 0 ? p[k - 1] : t === 4 ? 0 : pk;
-        t = sol[k + 1]; const pr = t === 0 ? p[k + 1] : t === 4 ? 0 : pk;
-        t = sol[k - st]; const pu = t === 0 ? p[k - st] : t === 4 ? 0 : pk;
-        t = sol[k + st]; const pd = t === 0 ? p[k + st] : t === 4 ? 0 : pk;
-        u[k] -= 0.5 * (pr - pl) / h; v[k] -= 0.5 * (pd - pu) / h;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i <= nx; i++) {
+        const k = j * su + i;
+        if (!uf[k]) continue;
+        const c0 = j * nx + i;
+        u[k] -= ((i < nx ? p[c0] : 0) - (i > 0 ? p[c0 - 1] : 0)) / h;
+      }
+    }
+    for (let j = 0; j <= ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const k = j * nx + i;
+        if (!vf[k]) continue;
+        v[k] -= ((j < ny ? p[k] : 0) - (j > 0 ? p[k - nx] : 0)) / h;
       }
     }
   }
 
   function fluid(dt, t) {
     markDrone();
-    boundaries(t);
-    advectField(dt);
-    boundaries(t);
+    bc(t);
+    advect(dt);
+    bc(t);
     diffuse(dt);
     forces(dt);
-    boundaries(t);
+    bc(t);
     project();
-    boundaries(t);
   }
 
   // ---- smoke ----
@@ -438,15 +535,18 @@ export function createDownwash(opts) {
       for (let i = 0; i < dnx; i++) {
         const x = (i + 0.5) * dcell, k = j * dnx + i;
         if (x > bx0 && x < bx1 && y > by0 && y < by1 && solidAt(x, y)) { dA[k] = -1; continue; }
-        sampleGrid(x, y);
-        sampleGrid(x - 0.5 * dt * sx, y - 0.5 * dt * sy);
-        const gx = (x - dt * sx) / dcell - 0.5, gy = (y - dt * sy) / dcell - 0.5;
+        let a = cUA[k], tx = cUx[k], ty = cUy[k];
+        const ux = (u[a] * (1 - tx) + u[a + 1] * tx) * (1 - ty) + (u[a + su] * (1 - tx) + u[a + su + 1] * tx) * ty;
+        a = cVA[k]; tx = cVx[k]; ty = cVy[k];
+        const uy = (v[a] * (1 - tx) + v[a + 1] * tx) * (1 - ty) + (v[a + nx] * (1 - tx) + v[a + nx + 1] * tx) * ty;
+        const mx = x - 0.5 * dt * ux, my = y - 0.5 * dt * uy;
+        const gx = (x - dt * sampleU(u, mx, my)) / dcell - 0.5, gy = (y - dt * sampleV(v, mx, my)) / dcell - 0.5;
         if (gx < -1 || gx > dnx || gy < -1 || gy > dny) { dA[k] = -1; continue; }
-        let a = Math.floor(gx), b = Math.floor(gy);
-        let fx = gx - a, fy = gy - b;
-        if (a < 0) { a = 0; fx = 0; } else if (a >= dnx - 1) { a = dnx - 2; fx = 1; }
-        if (b < 0) { b = 0; fy = 0; } else if (b >= dny - 1) { b = dny - 2; fy = 1; }
-        dA[k] = b * dnx + a; dFx[k] = fx; dFy[k] = fy;
+        let ia = Math.floor(gx), ib = Math.floor(gy);
+        let fx = gx - ia, fy = gy - ib;
+        if (ia < 0) { ia = 0; fx = 0; } else if (ia >= dnx - 1) { ia = dnx - 2; fx = 1; }
+        if (ib < 0) { ib = 0; fy = 0; } else if (ib >= dny - 1) { ib = dny - 2; fy = 1; }
+        dA[k] = ib * dnx + ia; dFx[k] = fx; dFy[k] = fy;
       }
     }
   }
@@ -633,9 +733,9 @@ export function createDownwash(opts) {
     hold(h) { held = h; if (h) stop(); else loop(); },
     stats() {
       let vmax = 0, smoke = 0;
-      for (let j = 1; j <= ny; j++) for (let i = 1; i <= nx; i++) {
-        const k = j * st + i; if (sol[k]) continue;
-        const sp = Math.hypot(u[k], v[k]); if (sp > vmax) vmax = sp;
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const c0 = j * nx + i, k = j * su + i; if (sol[c0]) continue;
+        const sp = Math.hypot(0.5 * (u[k] + u[k + 1]), 0.5 * (v[c0] + v[c0 + nx])); if (sp > vmax) vmax = sp;
       }
       for (let k = 0; k < d.length; k++) smoke += d[k];
       return { CELL, nx, ny, dnx, dny, stepMs: +stepMs.toFixed(2), vmax: Math.round(vmax), smoke: Math.round(smoke), drone: { x: Math.round(D.x), y: Math.round(D.y), tilt: +D.tilt.toFixed(2) }, ptr: ptr.on, degraded, iter, running };

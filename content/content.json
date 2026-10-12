@@ -31,18 +31,17 @@
     "venue": "Preprint, March 2026",
     "arxiv": "2603.22472",
     "claim": [
-      "When one robot flies or swims through the wake another robot has left, the disturbance it feels depends on what the fluid was doing a moment ago. We measured this on a gantry: a tethered monocopter is moved through the downwash of another one while a time-of-flight sensor records its altitude.",
-      "Models that only see the current state get the disturbance wrong. Giving them a short history of past states, and having them estimate the transport delay, improves prediction substantially across quadrotor CFD, ship interaction, fish schooling, a 2D drone simulation and the real hardware.",
-      "Across the seven architectures we compared, models with memory cut RMSE by 35% on quadrotor CFD, 39% in closed-loop 2D drone tracking and 21% on the gantry hardware."
+      "My MPhil thesis was on predicting wake effects between robots. Drones and underwater robots move by pushing air or water, and the wake they leave, like the downwash under a drone, can push nearby robots off course. Solving the fluid dynamics in real time is far too slow, so these disturbances are usually learned from data.",
+      "Existing models only look at where the robots are right now, but a wake takes time to travel, so the push a robot feels now was caused by what the other robot was doing in the past. Giving the models a short memory of recent motion cut prediction error by 21% to 67% across drones, ships, a fish-inspired water tank and a monocopter gantry I built to test it on real hardware. Building simple physics into the model also helps when data is limited, matching the baseline with a fifth of the parameters."
     ],
     "figures": [
       {
         "type": "video",
         "src": "/assets/video/gantry-rig.mp4",
-        "poster": "/assets/img/gantry-poster.jpg",
+        "poster": "/assets/img/gantry-poster.webp",
         "w": 1080,
         "h": 986,
-        "caption": "2025. The gantry that produced the hardware data. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one."
+        "caption": "The gantry I built to collect data and run closed-loop control experiments for testing the models. An LQR controller on a Raspberry Pi keeps the lower monocopter level as a stepper-driven carriage moves it through the wake of the upper one."
       },
       {
         "type": "image",
@@ -50,15 +49,15 @@
         "w": 1056,
         "h": 1049,
         "alt": "Labelled render of the gantry: rigid frame, upstream monocopter as the wake source at the top, a downstream monocopter on a vertical linear rail carried by a moving carriage, with a stepper and belt drive and an altitude sensor.",
-        "caption": "The gantry. The monocopter at the top produces the wake; the second one sits on a vertical rail on a carriage that moves beneath it."
+        "caption": "The gantry. The monocopter at the top produces the wake. The one below is free to move up and down on linear rails, and the whole carriage moves sideways on a belt-driven linear rail."
       },
       {
         "type": "video",
         "src": "/assets/video/drones.mp4",
-        "poster": "/assets/img/drones-poster.jpg",
+        "poster": "/assets/img/drones-poster.webp",
         "w": 1280,
         "h": 720,
-        "caption": "Two quadrotors in the flight arena, the lower one flying in the downwash of the other."
+        "caption": "I also tested the models on real quadrotors in the lab's flight arena, using its full OptiTrack motion-capture setup. Here the lower one flies in the downwash of the other."
       }
     ],
     "research_link": "The rig that produced the hardware data is the first project below."
@@ -67,14 +66,14 @@
   "projects": [
     {
       "id": "labyrinth",
-      "spec": "DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.",
+      "spec": "2024. DreamerV3, YOLOv5, Arduino-driven steppers, 3D-printed re-loader.",
       "prose": [
         "An online reinforcement-learning system that learns to play a wooden marble labyrinth, the toy where two knobs tilt the board to steer the marble. Stepper motors attached to the knobs tilt the board, a camera with YOLOv5 tracks the marble, and DreamerV3 learns from experience.",
         "A 3D-printed re-loader returns the marble after every attempt so training can run unsupervised. I changed the training loop so gradient updates only happen between episodes, which allows the controller to run at 45 Hz during live training."
       ],
       "media": {
         "src": "/assets/video/marble-maze.mp4",
-        "poster": "/assets/img/maze-poster.jpg",
+        "poster": "/assets/img/maze-poster.webp",
         "w": 960,
         "h": 544
       },
@@ -86,23 +85,120 @@
         "caption": "The board with the two steppers on its knobs and the re-loader at the corner."
       },
       "caption": "The agent steering the marble through the maze.",
-      "title": "Reinforcement-learning marble labyrinth"
+      "title": "Reinforcement-learning marble labyrinth",
+      "diagram": "Inline SVG in index.html, animated by maze-diagram.js. Facts from MazeGame/sheeprl/envs/BallGame.py: 640x480 camera, one YOLOv5 model for the ball (class 0) and the QR marker on the pole (class 1), 12 inputs (ball and marker position and speed, next two waypoints), reward = 100 x change in progress along 34 waypoints, two actions in [-1, 1] mapped to +-30 degrees and sent as \"Move,a,b\" over serial at 115200 baud, 45 Hz, MotorON runs the re-loader on reset."
     },
     {
       "id": "arm",
-      "spec": "2024. Four degrees of freedom, inverse kinematics, CAD and 3D printing.",
       "prose": [
-        "A four-degree-of-freedom servo arm, designed in CAD and 3D-printed, with inverse kinematics."
+        "A four-degree-of-freedom servo arm, designed in CAD and 3D-printed. Inverse kinematics turns a target position into the four joint angles."
       ],
       "media": {
         "src": "/assets/video/robotic-arm.mp4",
-        "poster": "/assets/img/arm-poster.jpg",
+        "poster": "/assets/img/arm-poster.webp",
         "w": 608,
         "h": 1080
       },
       "caption": "The arm running through a motion sequence.",
       "title": "Robotic arm",
-      "year": 2024
+      "year": 2024,
+      "short": "A four-degree-of-freedom servo arm with inverse kinematics."
+    },
+    {
+      "id": "roulette",
+      "title": "3D-printed roulette wheel",
+      "short": "A 3D-printed roulette wheel I designed, made and sold on eBay and Etsy.",
+      "prose": [
+        "A 25 cm roulette wheel I designed in CAD and 3D-printed.",
+        "I sold a few on eBay and Etsy, and the model is on MakerWorld if you want to print your own."
+      ],
+      "media": [
+        "/assets/img/roulette.webp",
+        "/assets/video/roulette-spin.mp4",
+        "/assets/img/roulette-ebay.webp"
+      ],
+      "makerworld_url": "https://makerworld.com/en/models/3369837-roulette-wheel-25cm#profileId-3832638",
+      "ebay_url": "https://www.ebay.co.uk/itm/318917335504"
+    },
+    {
+      "id": "airboat",
+      "title": "Twin-propeller air boat",
+      "short": "A catamaran pushed by two air propellers.",
+      "prose": [
+        "After taking apart the drone gantry, I used its parts to build a remote-controlled catamaran. I tested it on the River Cam."
+      ],
+      "media": [
+        "/assets/img/airboat.webp",
+        "/assets/video/airboat-river.mp4"
+      ]
+    },
+    {
+      "id": "four-mazes",
+      "title": "Three-board labyrinth workshop",
+      "short": "A robotics and machine learning workshop where teams programmed three labyrinth boards to race a marble to the finish.",
+      "prose": [
+        "I was invited to run a workshop on robotics and machine learning at a summer school run by Li Peng. I turned the labyrinth into a game: each team programmed the moves for the boards, and the first team to get the marble to the end won a prize.",
+        "A Raspberry Pi hosted a website that the students connected to from their laptops. With three boards and a queue, every team could send an attempt, watch it run and change their code straight away."
+      ],
+      "media": [
+        "/assets/img/workshop-teaching.webp",
+        "/assets/video/three-mazes-workshop.mp4",
+        "/assets/video/four-mazes.mp4"
+      ]
+    },
+    {
+      "id": "bike-fitting",
+      "title": "Bike fitting from video",
+      "short": "Saddle-height advice from a short phone video of someone cycling.",
+      "prose": [
+        "Professional bike fits are expensive, so with Kyle Fram and Fivos Papathanasiou I built a pipeline that takes a short video of someone cycling and says whether to raise or lower the saddle. It tracks the rider's joints and the bike, and a custom model estimates the bike's angle to the camera so the joint angles can be corrected for perspective.",
+        "To train that model we filmed riders with a Raspberry Pi and gyroscope on the bike recording its true angle. A 15 second clip takes about a minute to analyse, and you can try it with your own video at bikefitting.vercel.app."
+      ],
+      "media": [
+        "/assets/video/bike-fitting.mp4",
+        "/assets/img/bike-fitting-collect-1.webp",
+        "/assets/img/bike-fitting-collect-2.webp",
+        "/assets/img/bike-fitting-pi.webp"
+      ]
+    },
+    {
+      "id": "pill-dispenser",
+      "title": "Pill dispenser and reminder",
+      "short": "A wall-mounted dispenser that releases one pill a day and keeps a calendar of every dose taken.",
+      "prose": [
+        "I kept forgetting to take my multivitamins and supplements, so I built a dispenser that stores the capsules and releases them one at a time.",
+        "An ESP32 drives the motors and tracks which days I took them. It also hosts a local website that shows my progress and sends a notification to my phone if it is getting late and I still have not taken them."
+      ],
+      "media": [
+        "/assets/video/pill-dispenser.mp4",
+        "/assets/img/pill-calendar.webp"
+      ]
+    },
+    {
+      "id": "nutrition-site",
+      "title": "Website for bookings",
+      "short": "A website for Laura Bonesi Nutrition.",
+      "prose": [
+        "My mum is a nutritionist and needed a better way to manage her bookings, so I built her a website. Clients book consultations themselves, the bookings sync to her Google and Apple calendars with email confirmations, and an admin area lets her manage bookings and clients and edit the site herself. It is in English and Italian."
+      ],
+      "media": [
+        "/assets/img/nutrition-site.webp"
+      ]
+    },
+    {
+      "id": "robotics",
+      "title": "FIRST Tech Challenge robotics",
+      "short": "Captain of my school's competition robotics team, from the UK Inspire Award to the World Championship in Detroit.",
+      "prose": [
+        "I captained the St Chris Snowflakes, St Christopher School's FIRST Tech Challenge team. Each season the team designs, builds and programs a robot for that year's game, and competes against other schools' robots.",
+        "In the 2018–19 season we won the UK national competition, which took us to the World Championship in Detroit, where we won the Judges' Award."
+      ],
+      "media": [
+        "/assets/img/ftc-robot.webp",
+        "/assets/img/ftc-trophy.webp",
+        "/assets/img/ftc-worlds.webp",
+        "/assets/img/ftc-inspire.webp"
+      ]
     }
   ],
   "cv": {
@@ -145,5 +241,6 @@
   },
   "contact": {
     "line": "The quickest way to reach me is email."
-  }
+  },
+  "projects_note": "Side projects after the labyrinth are placeholder text and a guessed grouping of the media, waiting for Luca to correct."
 }

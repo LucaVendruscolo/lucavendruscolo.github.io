@@ -1,6 +1,6 @@
 # Rendering the hero still
 
-The static tier (reduced motion, Save-Data, low memory, JavaScript off, or the Pause button) shows a pre-rendered frame of the smoke instead of the live canvas. Two stills are shipped and chosen by a `<picture>` element in `a/index.html`:
+The static tier (reduced motion, Save-Data, low memory, JavaScript off, or the Pause button) shows a pre-rendered frame of the smoke instead of the live canvas. Two stills are shipped as a CSS background on `.hero::before` in `site.css`, chosen by a media query. The rule is switched off (`.anim .hero::before{content:none}`) when the live smoke will run, so most visitors never download them:
 
 | File | Viewport it was rendered at | Used when |
 |---|---|---|

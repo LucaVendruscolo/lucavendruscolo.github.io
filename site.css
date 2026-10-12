@@ -15,9 +15,9 @@
   --wake:#B8340F;
   --gutter:clamp(1.25rem,5vw,5.5rem);
   --gap:clamp(1rem,2vw,1.75rem);
-  --max:1280px;   /* content stops widening here; the gutters take up the rest */
+  --max:80rem;   /* content stops widening here; the gutters take up the rest */
   --edge:max(var(--gutter),calc((100vw - var(--max)) / 2));
-  --bar:56px;
+  --bar:3.5rem;
   --sans:Archivo,"Helvetica Neue",Arial,sans-serif;
   --serif:Literata,"Literata Fallback",Georgia,serif;
   --out:cubic-bezier(.2,.8,.3,1);
@@ -26,68 +26,70 @@
 }
 
 html{background:var(--paper);-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font:400 18px/1.6 var(--serif);font-synthesis:none;text-wrap:pretty;overflow-x:clip}
+/* every size is in rem, so on big screens the whole page grows with the root: 1x at 1800px, 1.25x at 2560px, at most 1.5x */
+@media (min-width:1800px){html{font-size:clamp(16px,calc(6.53px + .5263vw),24px)}}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1.125rem/1.6 var(--serif);font-synthesis:none;text-wrap:pretty;overflow-x:clip}
 *,*::before,*::after{box-sizing:border-box}
 h1,h2,h3{font-family:var(--sans);font-weight:500;text-wrap:balance;margin:0}
 p{margin:0}
 p + p{margin-top:1em}
 img,video{display:block;max-width:100%;height:auto}
 figure{margin:0}
-figcaption{font:400 17px/1.5 var(--serif);color:var(--ink-2);margin-top:.65rem}
+figcaption{font:400 1.0625rem/1.5 var(--serif);color:var(--ink-2);margin-top:.65rem}
 em{font-style:italic}
 
 a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink-2);text-decoration-thickness:1px;text-underline-offset:.15em;transition:text-decoration-thickness 140ms var(--out),text-decoration-color 140ms var(--out)}
-button{font:400 15px/1.2 var(--sans);color:var(--ink);background:none;border:0;padding:0;margin:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--ink-2);text-decoration-thickness:1px;text-underline-offset:.2em;transition:text-decoration-thickness 140ms var(--out),text-decoration-color 140ms var(--out)}
+button{font:400 0.9375rem/1.2 var(--sans);color:var(--ink);background:none;border:0;padding:0;margin:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--ink-2);text-decoration-thickness:1px;text-underline-offset:.2em;transition:text-decoration-thickness 140ms var(--out),text-decoration-color 140ms var(--out)}
 @media (hover:hover) and (pointer:fine){
   a:hover,button:hover{text-decoration-thickness:2px;text-decoration-color:var(--ink)}
 }
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 video:focus-visible{outline-color:var(--wake)}
 
-.skip{position:absolute;left:var(--gutter);top:-100px;z-index:20;font:400 15px var(--sans);background:var(--paper);padding:.75rem 1rem}
-.skip:focus{top:8px}
+.skip{position:absolute;left:var(--gutter);top:-100px;z-index:20;font:400 0.9375rem var(--sans);background:var(--paper);padding:.75rem 1rem}
+.skip:focus{top:0.5rem}
 
 /* 12-column grid */
 .g{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);padding-inline:var(--edge)}
 
 /* Bar: transparent over the hero, paper after. Sticky from the top of the document. */
-.bar{position:static;top:0;z-index:5;display:flex;align-items:center;justify-content:flex-end;gap:1.25rem 1.5rem;min-height:var(--bar);padding-inline:var(--edge);font:400 15px/1 var(--sans);flex-wrap:wrap}
+.bar{position:static;top:0;z-index:5;display:flex;align-items:center;justify-content:flex-start;gap:1.25rem 1.5rem;min-height:var(--bar);padding-inline:var(--edge);font:400 0.9375rem/1 var(--sans);flex-wrap:wrap}
 .js .bar{position:sticky;background:var(--paper)}
 .js .bar.clear{background:transparent}
-.mark{margin-right:auto;font-weight:500;text-decoration:none;opacity:0;visibility:hidden;min-height:44px;display:inline-flex;align-items:center;transition:opacity 240ms var(--out),visibility 0s linear 240ms}
+.mark{order:1;margin-left:auto;font-weight:500;text-decoration:none;opacity:0;visibility:hidden;min-height:2.75rem;display:inline-flex;align-items:center;transition:opacity 240ms var(--out),visibility 0s linear 240ms}
 .mark.on{opacity:1;visibility:visible;transition-delay:0s}
 .bar nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0 1.5rem}
-.bar nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;text-underline-offset:.4em;text-decoration-thickness:1px;text-decoration-color:var(--ink-2);transition:text-decoration-thickness 140ms var(--out)}
+.bar nav a{display:inline-flex;align-items:center;min-height:2.75rem;text-decoration:none;text-underline-offset:.4em;text-decoration-thickness:1px;text-decoration-color:var(--ink-2);transition:text-decoration-thickness 140ms var(--out)}
 .bar nav a[aria-current]{text-decoration:underline;text-decoration-thickness:2px;text-decoration-color:var(--ink)}
 @media (hover:hover) and (pointer:fine){
   .bar nav a:hover{text-decoration:underline}
   .bar nav a[aria-current]:hover{text-decoration-thickness:2px;text-decoration-color:var(--ink)}
 }
-#pause{min-height:44px;text-decoration:none}
-@media (hover:hover) and (pointer:fine){#pause:hover{text-decoration:underline;text-decoration-thickness:1px;text-decoration-color:var(--ink-2)}}
 
 /* Hero: the smoke tunnel */
-.hero{position:relative;isolation:isolate;min-height:100svh;margin-top:calc(-1 * var(--bar));display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:52fr auto 48fr;column-gap:var(--gap);padding-inline:var(--gutter)}
-.hero .still,.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
-.hero .still{object-fit:cover;object-position:50% 50%}
+.hero{position:relative;isolation:isolate;min-height:100svh;margin-top:calc(-1 * var(--bar));display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:52fr auto 48fr;column-gap:var(--gap);padding-inline:var(--edge)}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+/* the still: a background named only outside the live tier, so it is fetched only where it is shown
+   (the static tier, Pause, no JavaScript) */
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:50% 50%/cover no-repeat;transition:opacity 400ms var(--out)}
+html:not(.anim) .hero::before{background-image:url(/assets/img/a-hero-still.webp)}
 .hero canvas{inset:0 0 auto 0;height:calc(100% + 110vh);opacity:0;pointer-events:none;touch-action:pan-y;transition:opacity 400ms var(--out)}
 .hero.capture canvas{height:100%}
 main{position:relative;z-index:1}
-.hero .still{transition:opacity 400ms var(--out)}
 .hero.live canvas{opacity:1}
-.hero.live .still{opacity:0}
-.anim .hero .still{visibility:hidden}   /* the live smoke is coming: open on paper rather than on a still that will not line up with it */
-.hero.capture canvas,.hero.capture .still{transition:none}
+.hero.live::before{opacity:0}
+.anim .hero::before{content:none}   /* the live smoke is coming: open on paper rather than on a still that will not line up with it */
+.hero.capture canvas,.hero.capture::before{transition:none}
 .capture .bar,.capture h1,.capture .lede,.capture .skip{visibility:hidden}
-h1{grid-column:4/13;grid-row:2;font-size:clamp(42px,6.8vw,104px);line-height:.96;font-stretch:112%;letter-spacing:0;text-wrap:initial}
-h1 span{display:block;width:fit-content}
-.lede{grid-column:4/10;grid-row:3;align-self:start;font-size:20px;line-height:1.55;margin-top:1.75rem;max-width:32em}
+h1{grid-column:4/13;grid-row:2;font-size:clamp(2.125rem,4vw,3.75rem);line-height:1;font-stretch:112%;letter-spacing:0;text-wrap:initial}
+h1 span{display:inline-block}
+.lede{grid-column:4/10;grid-row:3;align-self:start;font-size:1.25rem;line-height:1.55;margin-top:1.75rem;max-width:32em}
 
 /* About */
 #about{padding-block:clamp(4.5rem,9vw,11rem) clamp(2.5rem,5vw,6rem);align-items:start}
-.portrait{grid-column:1/4;width:100%;max-width:240px;height:auto}
-.about-text{grid-column:5/12;font-size:20px;line-height:1.55;max-width:58ch}
-.about-text h2{font-size:30px;line-height:1.15;letter-spacing:-.01em;margin-bottom:1.25rem}
+.portrait{grid-column:1/5;justify-self:center;align-self:center;width:100%;max-width:15rem;height:auto}   /* centred in the space beside the text, level with its middle */
+.about-text{grid-column:5/12;font-size:1.25rem;line-height:1.55;max-width:58ch}
+.about-text h2{font-size:1.875rem;line-height:1.15;letter-spacing:-.01em;margin-bottom:1.25rem}
 .about-text p + p{margin-top:1em}
 
 /* Research: two work blocks. Text with its diagram beside it, then a strip of photos and videos below.
@@ -97,81 +99,193 @@ h1 span{display:block;width:fit-content}
 .work{align-items:start}
 .work + .work{margin-top:clamp(5rem,10vw,10rem)}
 .work .text{grid-column:1/8;max-width:60ch}
-.work h2{font-size:40px;line-height:1.1;letter-spacing:-.01em}
-.work .title{font-size:20px;line-height:1.45;margin-top:1.25rem}
-.work .authors{font-size:17px;line-height:1.5;color:var(--ink-2);margin-top:.75rem}
+.work h2{font-size:2.5rem;line-height:1.1;letter-spacing:-.01em}
+.work .title{font-size:1.25rem;line-height:1.45;margin-top:1.25rem}
+.work .authors{font-size:1.0625rem;line-height:1.5;color:var(--ink-2);margin-top:.75rem}
 .work .authors + p{margin-top:2rem}
 .nw{white-space:nowrap}
 .work .diagram{grid-column:8/13}
-.diagram img{width:100%;height:auto}
-.placeholder{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;padding:1.5rem;border:1px dashed var(--rule);font:400 15px/1.4 var(--sans);color:var(--ink-2);text-align:center}
+.diagram img,.diagram video{width:100%;height:auto}
+/* the labyrinth figure, drawn like a paper figure: (a) the control loop as a block diagram, (b) the board from above,
+   traced from the rig (holes, walls, printed route), with the reward. Static as written; maze-diagram.js steps through it.
+   The board in (b) is drawn at half scale, so its stroke widths are doubled */
+.pipeline{display:grid;gap:1.25rem}
+.fg{display:block;width:100%;height:auto;overflow:visible;font-family:var(--sans)}
+.fg text{fill:var(--ink)}
+.fg-panel{font-size:0.8125rem;font-weight:500}
+.fg-m,.fg-al,.fg-eq{font-family:var(--serif);font-style:italic}
+.fg-block rect{fill:#fff;stroke:var(--ink-2);stroke-width:1}
+.fg-bt{font-size:0.8438rem;font-weight:500;text-anchor:middle}
+.fg-bs{font-size:0.75rem;fill:var(--ink-2) !important;text-anchor:middle;font-variant-numeric:tabular-nums}
+.fg-bs tspan:not([id]){font-family:var(--serif);font-style:italic}
+.fg-arrow path{fill:none;stroke:var(--ink-2);stroke-width:1}
+.fg-al{font-size:0.8125rem}
+.fg-head path{fill:var(--ink-2)}
+.fg-narrow{display:none}
+.fg-note{font-size:0.7188rem;fill:var(--ink-2) !important;text-anchor:middle;font-style:italic;font-family:var(--serif)}
+.fg-token{fill:var(--wake);opacity:0}
+.fg-field{fill:#fff;stroke:var(--ink);stroke-width:2}
+.fg-holes circle,.fg-hole{fill:var(--ink-2)}
+.fg-walls rect,.fg-wall{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.6}
+.fg-route{fill:none;stroke:var(--ink);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.fg-arrowhead{fill:var(--ink)}
+.fg-done{fill:none;stroke:var(--wake);stroke-width:7;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+.fg-qr{fill:#fff;stroke:var(--ink);stroke-width:2.4}
+.fg-qri{fill:var(--ink)}
+.fg-proj{stroke:var(--ink);stroke-width:2.4;stroke-dasharray:6 5}
+.fg-q{fill:#fff;stroke:var(--ink);stroke-width:2.6}
+.fg-ball{fill:var(--wake)}
+.fg-lab{font-size:1.375rem;fill:var(--ink-2) !important}
+.fg-lab.fg-m{fill:var(--ink) !important;font-size:1.5rem}
+.fg-b-wrap{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);column-gap:1rem;align-items:end}
+.fg-panel-h{grid-column:1/-1;font:500 0.8125rem/1.2 var(--sans);margin:0 0 .5rem}
+.fg-key{font:400 0.7812rem/1.35 var(--sans);color:var(--ink-2)}
+.fg-eq{margin:0;font:italic 400 0.875rem/1.6 var(--serif);color:var(--ink)}
+.fg-eq i{font-style:italic}
+.fg-eq sub{font-size:.72em;line-height:0}
+.fg-eqv{font:400 0.7812rem var(--sans);color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.live .fg-block rect{transition:stroke 200ms var(--out)}
+.live .fg-block.on rect{stroke:var(--ink);stroke-width:1.8}
+.live .fg-arrow.on path{stroke:var(--ink)}
 .strip{grid-column:1/-1;display:grid;column-gap:var(--gap);row-gap:2.5rem;align-items:start;margin-top:clamp(2.5rem,5vw,4rem)}
 .strip img,.strip video{width:100%;height:auto}
-.wake .strip{grid-template-columns:minmax(0,1.0953fr) minmax(0,1.7778fr)}   /* 1080x986, 1280x720 */
-.maze .strip{grid-template-columns:minmax(0,1.7647fr) minmax(0,1.3333fr)}   /* 960x544, 1200x900 */
-.vbtn{margin-left:.35em;min-height:44px;margin-block:-14px}
+.wake .strip{grid-template-columns:minmax(0,1.0067fr) minmax(0,1.7778fr)}   /* 1056x1049, 1280x720 */
+/* labyrinth: text and video share the top row; below, (a) the loop, (b) the board and the photo sit side by side */
+.maze .text{grid-column:1/7}
+.maze .diagram{grid-column:7/13}
+.maze .strip{grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);row-gap:0;align-items:stretch;margin-top:2.5rem}
+.maze-fig{display:flex;flex-direction:column}
+.maze .pipeline{flex:1;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);column-gap:var(--gap);align-items:stretch}
+.maze .fg-a-wrap,.maze .fg-b-wrap{display:flex;flex-direction:column;align-items:stretch;gap:.75rem}
+/* the photo fills the row's full height (cropped a little if need be) so its bottom meets the caption and equations */
+.maze .strip > figure:last-child{display:contents}
+.maze .strip > figure:last-child img{grid-column:2;grid-row:1;align-self:stretch;height:100%;object-fit:cover}
+.maze .strip > figure:last-child figcaption{grid-column:2;grid-row:2}
+.maze .fg-cap,.maze .fg-key{margin-top:auto}   /* the caption and the equations sit on the bottom line, level with the photo */
+.fg-cap{margin:0;font:400 1rem/1.5 var(--serif);color:var(--ink-2)}
+video:not([controls]){cursor:pointer}   /* autoplaying videos: click to pause or play */
 
-/* Fun side projects: a grid of cards, media in a fixed 4:3 frame so cards line up, never cropped */
+/* Fun side projects: a grid of <details> boxes. Closed, a box is a 4:3 preview (one still, or two side
+   by side, cropped to fit), a title and one line. Open, it takes the whole row and shows every photo and
+   video uncropped, with the longer text; dense flow lets the other boxes fill the gaps around it. */
 #projects{padding-block:clamp(4rem,8vw,9rem)}
-#projects h2{grid-column:1/-1;font-size:30px;line-height:1.15;letter-spacing:-.01em}
-.side{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:3rem var(--gap);margin-top:2rem;align-items:start}
-.frame video{width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;background:var(--paper-2)}
-.card h3{font-size:22px;line-height:1.2;letter-spacing:-.01em;margin-top:1.25rem}
-.spec{font:400 15px/1.5 var(--sans);color:var(--ink-2);margin-top:8px;font-variant-numeric:tabular-nums}
+#projects h2{grid-column:1/-1;font-size:1.875rem;line-height:1.15;letter-spacing:-.01em}
+.side{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,18.75rem),1fr));grid-auto-flow:row dense;gap:3rem var(--gap);margin-top:2rem;align-items:start}
+.card{scroll-margin-top:calc(var(--bar) + 1rem)}
+.card summary{display:block;list-style:none;cursor:pointer}
+.card summary::-webkit-details-marker{display:none}
+/* closed boxes share their row's tracks (still, title, one line, Show more), so the text lines up across a row */
+.side > .card:not([open]){display:grid;grid-row:span 4;grid-template-rows:subgrid;row-gap:0}
+.side > .card:not([open]) > summary{display:grid;grid-row:span 4;grid-template-rows:subgrid;row-gap:0;align-items:start}
+.peek{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0.25rem;aspect-ratio:4/3;background:var(--paper-2);overflow:hidden}
+.peek img{width:100%;height:100%;object-fit:cover}   /* to frame a preview differently: style="object-position:50% 40%" on the img */
+.card h3{font-size:1.375rem;line-height:1.2;letter-spacing:-.01em;margin-top:1.25rem;text-decoration:underline;text-decoration-color:transparent;text-decoration-thickness:1px;text-underline-offset:.15em;transition:text-decoration-color 140ms var(--out)}
+@media (hover:hover) and (pointer:fine){.card summary:hover h3{text-decoration-color:var(--ink-2)}}
+.card .spec,.card .short{display:block}
+.card .short{margin-top:.75rem}
+.more{display:inline-flex;align-items:center;min-height:2.75rem;margin-top:.25rem;font:400 0.9375rem/1.2 var(--sans);text-decoration:underline;text-decoration-color:var(--ink-2);text-decoration-thickness:1px;text-underline-offset:.2em}
+.more::after{content:"Show more"}
+.card[open]{grid-column:1/-1;border-top:1px solid var(--rule);padding-top:1.5rem}
+.card[open] .peek,.card[open] .short{display:none}
+.card[open] h3{margin-top:0;font-size:1.875rem}
+.card[open] .more::after{content:"Close"}
+/* the pop-up a box opens into: a framed panel over the dimmed page; a click outside it, Esc or Close shuts it */
+html{scrollbar-gutter:stable}   /* so locking the page behind the panel does not shift it sideways */
+html.sheet-open{overflow:hidden}
+.sheet{padding:0;margin:auto;border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink);width:min(70rem,calc(100vw - 2 * var(--gutter)));max-width:none;max-height:calc(100svh - 3rem);overflow:hidden;transform-origin:0 0}
+.sheet::backdrop{background:rgba(16,22,25,.6)}
+.sheet-in{max-height:calc(100svh - 3rem);overflow:auto;overscroll-behavior:contain;padding:0 clamp(1.25rem,3vw,2.5rem) clamp(1.75rem,3vw,2.75rem)}
+.sheet-head{position:sticky;top:0;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;padding:clamp(1.25rem,2.5vw,2rem) 0 1.25rem;background:var(--paper);border-bottom:1px solid var(--rule)}
+.sheet-head h3{font-size:1.875rem;line-height:1.15;letter-spacing:-.01em}
+.sheet-head .spec{margin-top:0.375rem}
+#sheet-spec:empty{display:none}
+.sheet-x{flex:none;min-height:2.75rem;margin-top:-.625rem;font-size:0.9375rem}
+.sheet .full{margin-top:1.75rem}
+.full{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:2.5rem var(--gap);margin-top:1.5rem;align-items:start}
+.full .text{max-width:60ch}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13.75rem),1fr));gap:2rem var(--gap);align-items:start}
+.gallery .wide{grid-column:1/-1}   /* screenshots and other wide pictures that need the full width to be legible */
+.gallery .trio{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3333fr) minmax(0,1.3333fr);gap:var(--gap)}   /* a 1:1 and two 4:3 photos, sized to one height */
+.gallery.split{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}   /* a tall video on the left, the rest stacked beside it */
+.gallery.split > :first-child{grid-row:span 2}
+.gallery.split.tall{grid-template-columns:minmax(0,.87fr) minmax(0,1fr)}   /* a portrait photo as tall as the two 16:9 videos beside it */
+.gallery img,.gallery video{width:100%;height:auto;max-height:min(70vh,35rem);object-fit:contain;object-position:left top}
+.spec{font:400 0.9375rem/1.5 var(--sans);color:var(--ink-2);margin-top:0.5rem;font-variant-numeric:tabular-nums}
 .spec + p{margin-top:1.25rem}
 .work .spec + p{margin-top:2rem}
 
 /* CV */
 #cv{padding-block:clamp(4rem,8vw,9rem);align-items:start}
 #cv .scene{grid-column:1/5;align-self:stretch;display:flex;flex-direction:column}
-#cv h2{font-size:30px;line-height:1.15;letter-spacing:-.01em;padding-top:2rem}
 /* the smoke canvas bleeds into the gutter so the smoke enters from the edge of the screen */
-#cv canvas{flex:1 1 0;min-height:0;width:calc(100% + var(--edge));margin-left:calc(-1 * var(--edge));margin-top:2rem;pointer-events:none;touch-action:pan-y;opacity:0;transition:opacity 400ms var(--out)}
+#cv canvas{flex:1 1 0;min-height:0;width:calc(100% + var(--edge));margin-left:calc(-1 * var(--edge));pointer-events:none;touch-action:pan-y;opacity:0;transition:opacity 400ms var(--out)}
 #cv.live canvas{opacity:1}
 .ledgers{grid-column:5/13;border-top:1px solid var(--rule);padding-top:2rem}
-.ledgers h3{font:500 18px/1.3 var(--sans);margin:0 0 1.5rem}
+.ledgers h3{font:500 1.125rem/1.3 var(--sans);margin:0 0 1.5rem}
 .ledger + h3{margin-top:3.5rem}
 .ledger{margin:0}
 .ledger div{display:grid;grid-template-columns:9ch 1fr;column-gap:1rem}
-.ledger div + div{margin-top:28px}
-.ledger dt{font:400 15px/1.7 var(--sans);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.ledger div + div{margin-top:1.75rem}
+.ledger dt{font:400 0.9375rem/1.7 var(--sans);color:var(--ink-2);font-variant-numeric:tabular-nums}
 .ledger dd{margin:0}
-.ledger .t{display:block;font:500 18px/1.4 var(--sans)}
-.ledger .d{display:block;font:400 17px/1.5 var(--serif);color:var(--ink-2);margin-top:.25rem;max-width:60ch}
+.ledger .t{display:block;font:500 1.125rem/1.4 var(--sans)}
+.ledger .d{display:block;font:400 1.0625rem/1.5 var(--serif);color:var(--ink-2);margin-top:.25rem;max-width:60ch}
 
 /* Contact */
 #contact{padding-block:0 clamp(4rem,8vw,9rem)}
 .close{grid-column:5/13;border-top:1px solid var(--rule);padding-top:2rem}
-.close h2{font-size:30px;line-height:1.15;letter-spacing:-.01em;margin-bottom:1.5rem}
-.close .lead{font-size:22px;line-height:1.45}
-.close .mail{font-size:22px;line-height:1.45;margin-top:.5rem}
-.close .links{font:400 15px/1.2 var(--sans);margin-top:2.5rem;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem}
-.close .links a{display:inline-flex;align-items:center;min-height:44px}
+.close h2{font-size:1.875rem;line-height:1.15;letter-spacing:-.01em;margin-bottom:1.5rem}
+.close .lead{font-size:1.375rem;line-height:1.45}
+.close .mail{font-size:1.375rem;line-height:1.45;margin-top:.5rem}
+.close .links{font:400 0.9375rem/1.2 var(--sans);margin-top:2.5rem;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem}
+.close .links a{display:inline-flex;align-items:center;min-height:2.75rem}
 
 section{scroll-margin-top:var(--bar)}
 
-/* Narrower than 1000px: the two-column acts stack */
+/* Narrower than 62.5rem: the two-column acts stack */
 @media (max-width:999px){
   .work .text{grid-column:1/-1}
-  .work .diagram{grid-column:1/-1;width:100%;max-width:520px;margin-top:2.5rem}
-  .portrait{grid-column:1/4}
+  .work .diagram{grid-column:1/-1;width:100%;max-width:32.5rem;margin-top:2.5rem}
+  .maze .text,.maze .diagram{grid-column:1/-1}
+  .maze .strip{grid-template-columns:minmax(0,1fr)}
+  .maze .strip{row-gap:2.5rem}
+  .maze .strip > figure:last-child{display:block;max-width:32.5rem}
+  .maze .strip > figure:last-child img{height:auto}
+  .portrait{grid-column:1/4;justify-self:start;align-self:start}
   .about-text{grid-column:1/-1;margin-top:2rem}
   #cv .scene{grid-column:1/-1}
-  #cv h2{padding-top:0;margin-bottom:2rem}
   #cv canvas{display:none}
   .ledgers,.close{grid-column:1/-1}
 }
 
+@media (max-width:379px){
+  .bar{font-size:0.875rem}
+  .bar nav ul{gap:0 .8rem}   /* keeps the five links on one row on the narrowest phones */
+}
 @media (max-width:699px){
-  h1{grid-column:2/13;font-size:clamp(44px,12vw,64px)}
+  html:not(.anim) .hero::before{background-image:url(/assets/img/a-hero-still-m.webp)}
+  h1{grid-column:2/13;font-size:clamp(2.125rem,10vw,2.75rem)}
+  h1 span{display:block;width:fit-content}
   .hero canvas{height:calc(100% + 40vh)}   /* no pointer to push it with, so it needs less room below */
-  .lede{grid-column:2/13;font-size:18px;max-width:none}
-  .bar{justify-content:flex-start}
-  .mark{flex-basis:100%;min-height:0}
+  .lede{grid-column:2/13;font-size:1.125rem;max-width:none}
+  .mark{order:0;margin-left:0;flex-basis:100%;min-height:0}
   .mark.on{margin-bottom:-.5rem}
-  .about-text{font-size:18px}
+  .about-text{font-size:1.125rem}
   .ledger div{grid-template-columns:1fr}
   .ledger dt{margin-bottom:.15rem}
-  .work h2{font-size:28px}
+  .work h2{font-size:1.75rem}
+  .full{grid-template-columns:minmax(0,1fr)}
+  .gallery.split,.gallery.split.tall,.gallery .trio{grid-template-columns:minmax(0,1fr)}
+  .gallery.split > :first-child{grid-row:auto}
+  .sheet{width:100vw;height:100svh;max-height:100svh;border:0;border-radius:0;}   /* phones: the panel is the whole screen */
+  .sheet-in{height:100%;max-height:none}
+  .sheet-head h3{font-size:1.5rem}
   .wake .strip,.maze .strip{grid-template-columns:minmax(0,1fr)}
+  .fg-wide{display:none}
+  .fg-narrow{display:block}
+  .fg-b-wrap{grid-template-columns:minmax(0,1fr)}
+  .maze .pipeline{grid-template-columns:minmax(0,1fr)}
+  .maze .fg-a-wrap{display:contents}
+  .maze .fg-cap{order:3;margin-top:0}
+  .fg-key{margin-top:.75rem}
 }
