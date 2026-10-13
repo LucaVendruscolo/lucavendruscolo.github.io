@@ -716,7 +716,7 @@ export function createSmoke(opts) {
     clearTimeout(resizeT);
     resizeT = setTimeout(() => {
       const w = hero.clientWidth, h = hero.clientHeight;
-      if (w === lastW && h === lastH) return;
+      if (w === lastW && (h === lastH || coarse)) return;   // on touch screens a height-only change is the address bar, not a new layout
       lastW = w; lastH = h;
       if (opts.measure) setObstacles(opts.measure());
       rebuild();

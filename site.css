@@ -263,13 +263,16 @@ section{scroll-margin-top:var(--bar)}
   .bar nav ul{gap:0 .8rem}   /* keeps the five links on one row on the narrowest phones */
 }
 @media (max-width:699px){
+  html{font-size:14px}   /* every size is in rem, so text, gaps and figures all come down together */
+  .side{grid-template-columns:repeat(2,minmax(0,1fr));gap:2.25rem var(--gap)}
+  .card h3{font-size:1.125rem;margin-top:.75rem}
+  .card .short{font-size:.9375rem;line-height:1.45;margin-top:.4rem}
   html:not(.anim) .hero::before{background-image:url(/assets/img/a-hero-still-m.webp)}
   h1{grid-column:2/13;font-size:clamp(2.125rem,10vw,2.75rem)}
   h1 span{display:block;width:fit-content}
   .hero canvas{height:calc(100% + 40vh)}   /* no pointer to push it with, so it needs less room below */
   .lede{grid-column:2/13;font-size:1.125rem;max-width:none}
-  .mark{order:0;margin-left:0;flex-basis:100%;min-height:0}
-  .mark.on{margin-bottom:-.5rem}
+  .mark{order:0;margin-left:0;flex-basis:100%;min-height:0;margin-bottom:-.5rem}   /* the same whether or not the name is showing, so the bar never changes height */
   .about-text{font-size:1.125rem}
   .ledger div{grid-template-columns:1fr}
   .ledger dt{margin-bottom:.15rem}
