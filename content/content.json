@@ -16,7 +16,7 @@
     "sentence": "Robotics and machine learning researcher."
   },
   "about": [
-    "In 2026 I graduated with Distinction from the MPhil in Advanced Computer Science at the University of Cambridge, where I worked in Amanda Prorok's lab. Before that I did Computer Science at Queen Mary University of London and graduated with a First. I live between Cambridge and London and speak English and Italian.",
+    "I am a research assistant in Amanda Prorok's lab at the University of Cambridge, where in 2026 I graduated with Distinction from the MPhil in Advanced Computer Science. Before that I did Computer Science at Queen Mary University of London and graduated with a First. I live between Cambridge and London and speak English and Italian.",
     "I like building physical systems that have to work in real time. The two rigs below are examples: one keeps a small monocopter level while another one's wake hits it, the other learns to steer a marble through a wooden labyrinth."
   ],
   "paper": {
@@ -134,7 +134,7 @@
     },
     {
       "id": "four-mazes",
-      "title": "Three-board labyrinth workshop",
+      "title": "Summer school workshop",
       "short": "A robotics and machine learning workshop where teams programmed three labyrinth boards to race a marble to the finish.",
       "prose": [
         "I was invited to run a workshop on robotics and machine learning at a summer school run by Li Peng. I turned the labyrinth into a game: each team programmed the moves for the boards, and the first team to get the marble to the end won a prize.",
@@ -215,6 +215,11 @@
       }
     ],
     "experience": [
+      {
+        "years": "2026–",
+        "title": "University of Cambridge, Prorok Lab",
+        "detail": "Research assistant in Amanda Prorok's lab in the Department of Computer Science and Technology."
+      },
       {
         "years": "2023–2024",
         "title": "Insilico Medicine, Hong Kong",

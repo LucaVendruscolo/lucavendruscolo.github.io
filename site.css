@@ -209,6 +209,7 @@ html.sheet-open{overflow:hidden}
 .gallery.split{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}   /* a tall video on the left, the rest stacked beside it */
 .gallery.split > :first-child{grid-row:span 2}
 .gallery.split.tall{grid-template-columns:minmax(0,.87fr) minmax(0,1fr)}   /* a portrait photo as tall as the two 16:9 videos beside it */
+.gallery.split.packed{grid-template-rows:auto 1fr}   /* the two on the right are much shorter than the video: keep the second right under the first */
 .gallery img,.gallery video{width:100%;height:auto;max-height:min(70vh,35rem);object-fit:contain;object-position:left top}
 .spec{font:400 0.9375rem/1.5 var(--sans);color:var(--ink-2);margin-top:0.5rem;font-variant-numeric:tabular-nums}
 .spec + p{margin-top:1.25rem}
